@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <!-- Meta obligatorio para evitar el error de la imagen 5d32308b-cb6a-47b6-813f-4bfff91a1509 -->
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Reporte Caso {{ caso.nurej }}</title>
+    <style>
+        @page { size: letter; margin: 2cm; }
+        body { font-family: Helvetica, Arial, sans-serif; color: #333; }
+        .header { text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
+        .titulo { font-size: 18pt; font-weight: bold; color: #2c3e50; }
+        .seccion-titulo { background-color: #f2f2f2; padding: 5px; font-weight: bold; margin-top: 20px; border-left: 5px solid #2c3e50; }
+        .dato-fila { margin: 10px 0; border-bottom: 0.5pt solid #eee; padding-bottom: 5px; }
+        .label { font-weight: bold; width: 150px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="titulo">CONSULTORIO JURÍDICO POPULAR</div>
+        <div>FICHA DE SEGUIMIENTO DE PROCESO</div>
+        <div style="font-size: 9pt;">Fecha de reporte: {{ fecha|date:"d/m/Y H:i" }}</div>
+    </div>
+
+    <div class="seccion-titulo">DATOS DEL PROCESO (NUREJ: {{ caso.nurej }})</div>
+    <div class="dato-fila"><span class="label">Materia:</span> {{ caso.materia }}</div>
+    <div class="dato-fila"><span class="label">Estado actual:</span> {% if caso.activo %}Activo{% else %}En Papelera{% endif %}</div>
+    
+    <div class="seccion-titulo">INFORMACIÓN DEL CLIENTE</div>
+    <div class="dato-fila"><span class="label">Nombre Completo:</span> {{ caso.cliente|upper }}</div>
+    
+    <div class="seccion-titulo">PERSONAL ASIGNADO</div>
+    <div class="dato-fila"><span class="label">Abogado Responsable:</span> {{ caso.abogado|default:"Sin asignar aún" }}</div>
+
+    <div style="margin-top: 50px; text-align: center; font-size: 8pt; color: #777;">
+        Este documento es una impresión oficial del sistema de control legal.
+    </div>
+</body>
+</html>
