@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block titulo %}Reportes e Informes{% endblock %}
+{% block topbar_titulo %}Reportes e Informes{% endblock %}
+
+{% block contenido %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="fw-bold mb-0">Estadísticas del bufete</h5>
+    <a href="{% url 'exportar_pdf' %}" class="btn btn-danger btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Exportar PDF general
+    </a>
+</div>
+
+<!-- Tarjetas de resumen -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:12px;">
+            <div class="fs-2 fw-bold text-primary">{{ resumen.total_clientes }}</div>
+            <div class="text-muted" style="font-size:.8rem;">Clientes activos</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:12px;">
+            <div class="fs-2 fw-bold text-success">{{ resumen.activos }}</div>
+            <div class="text-muted" style="font-size:.8rem;">Expedientes activos</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:12px;">
+            <div class="fs-2 fw-bold text-secondary">{{ resumen.concluidos }}</div>
+            <div class="text-muted" style="font-size:.8rem;">Casos concluidos</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:12px;">
+            <div class="fs-2 fw-bold text-warning">{{ resumen.tareas_pendientes }}</div>
+            <div class="text-muted" style="font-size:.8rem;">Tareas pendientes</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:12px;">
+            <div class="fs-2 fw-bold text-info">{{ resumen.total_contratos }}</div>
+            <div class="text-muted" style="font-size:.8rem;">Contratos generados</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:12px;">
+            <div class="fs-2 fw-bold text-danger">{{ resumen.tareas_vencidas }}</div>
+            <div class="text-muted" style="font-size:.8rem;">Tareas vencidas</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:12px;">
+            <div class="fs-2 fw-bold" style="color:#6f42c1;">{{ resumen.eventos_mes }}</div>
+            <div class="text-muted" style="font-size:.8rem;">Audiencias este mes</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:12px;">
+            <div class="fs-2 fw-bold text-dark">{{ resumen.total_expedientes }}</div>
+            <div class="text-muted" style="font-size:.8rem;">Total expedientes</div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráfico 1: Expedientes por mes (línea) -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                <h6 class="fw-semibold mb-0">Expedientes registrados por mes (últimos 12 meses)</h6>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <canvas id="chartMeses" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos 2 y 3 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                <h6 class="fw-semibold mb-0">Expedientes por materia</h6>
+            </div>
+            <div class="card-body px-4 pb-4 d-flex justify-content-center">
+                <canvas id="chartMaterias" style="max-height:280px;"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                <h6 class="fw-semibold mb-0">Expedientes por estado</h6>
+            </div>
+            <div class="card-body px-4 pb-4 d-flex justify-content-center">
+                <canvas id="chartEstados" style="max-height:280px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos 4 y 5 -->
+<div class="row g-3">
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                <h6 class="fw-semibold mb-0">Expedientes por abogado</h6>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <canvas id="chartAbogados" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                <h6 class="fw-semibold mb-0">Estado de tareas</h6>
+            </div>
+            <div class="card-body px-4 pb-4 d-flex justify-content-center">
+                <canvas id="chartTareas" style="max-height:250px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const COLORES = [
+    '#2e59a7','#28a745','#fd7e14','#6f42c1',
+    '#dc3545','#17a2b8','#ffc107','#6c757d',
+];
+
+// Gráfico 1 — Línea: expedientes por mes
+new Chart(document.getElementById('chartMeses'), {
+    type: 'line',
+    data: {
+        labels: {{ labels_meses|safe }},
+        datasets: [{
+            label: 'Expedientes',
+            data: {{ data_meses|safe }},
+            borderColor: '#2e59a7',
+            backgroundColor: 'rgba(46,89,167,.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#2e59a7',
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+    }
+});
+
+// Gráfico 2 — Dona: por materia
+new Chart(document.getElementById('chartMaterias'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ labels_materias|safe }},
+        datasets: [{
+            data: {{ data_materias|safe }},
+            backgroundColor: COLORES,
+            borderWidth: 2,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+    }
+});
+
+// Gráfico 3 — Dona: por estado
+new Chart(document.getElementById('chartEstados'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ labels_estados|safe }},
+        datasets: [{
+            data: {{ data_estados|safe }},
+            backgroundColor: ['#28a745','#6c757d','#ffc107'],
+            borderWidth: 2,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+    }
+});
+
+// Gráfico 4 — Barras horizontales: por abogado
+new Chart(document.getElementById('chartAbogados'), {
+    type: 'bar',
+    data: {
+        labels: {{ labels_abogados|safe }},
+        datasets: [{
+            label: 'Expedientes',
+            data: {{ data_abogados|safe }},
+            backgroundColor: '#2e59a7',
+            borderRadius: 6,
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+
+// Gráfico 5 — Barras: tareas por estado
+new Chart(document.getElementById('chartTareas'), {
+    type: 'bar',
+    data: {
+        labels: {{ labels_tareas|safe }},
+        datasets: [{
+            label: 'Tareas',
+            data: {{ data_tareas|safe }},
+            backgroundColor: ['#ffc107','#fd7e14','#28a745'],
+            borderRadius: 6,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+</script>
+{% endblock %}

@@ -1,250 +1,58 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Panel de Procesos - Consultorio Popular</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .navbar { background-color: #2c3e50; color: white; }
-        .table-container { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    </style>
-</head>
+{% extends "base.html" %}
+{% block titulo %}Listado de Expedientes{% endblock %}
+{% block topbar_titulo %}Expedientes{% endblock %}
 
-<body>
+{% block contenido %}
 
-<!-- Navbar Estilizado basado en 1000054027_3.png -->
-<nav class="navbar navbar-expand-lg navbar-dark shadow-sm py-3 mb-4" style="background-color: #2c3e50 !important;">
-    <div class="container-fluid px-4">
-        <!-- Lado Izquierdo: Logo y Títulos -->
-        <a class="navbar-brand d-flex align-items-center" href="{% url 'listar_casos' %}">
-            <i class="bi bi-bank2 fs-2 me-3 text-light opacity-75"></i>
-            <div>
-                <span class="d-block fs-4 fw-bold mb-0 lh-1">Sistema Jurídico</span>
-                <small class="text-white-50 fw-light" style="font-size: 0.75rem;">Consultorio Jurídico Popular - El Alto</small>
-            </div>
+<!-- Encabezado -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="fw-bold mb-0">Procesos registrados</h5>
+    <div class="d-flex gap-2">
+        <a href="{% url 'registrar_caso' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> Nuevo caso
         </a>
-
-        <!-- Lado Derecho: Acciones de Usuario e Iconos -->
-        <div class="d-flex align-items-center">
-            <div class="d-none d-md-flex me-4">
-                <a href="#" class="text-white-50 mx-2"><i class="bi bi-person fs-5"></i></a>
-                <a href="#" class="text-white-50 mx-2"><i class="bi bi-chat-left-dots fs-5"></i></a>
-            </div>
-            <button class="btn btn-outline-light border-0 opacity-75" type="button">
-                <i class="bi bi-list fs-3"></i>
-            </button>
-        </div>
-    </div>
-</nav>
-<!-- Nuevo Dashboard: Estilo basado en 1000054027_3.png -->
-<div class="container-fluid px-4">
-    <h4 class="mb-4 text-secondary">Dashboard</h4>
-    
-    <div class="row g-3 mb-5">
-        <!-- Casos Activos -->
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0" style="background-color: #2c3e50; color: white;">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between px-md-1">
-                        <div>
-                            <p class="mb-1">Casos Activos</p>
-                            <h3 class="fw-bold">{{ casos.count }}</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="bi bi-briefcase-fill fs-1 opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Procesos (Verde) -->
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0" style="background-color: #51a351; color: white;">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between px-md-1">
-                        <div>
-                            <p class="mb-1">Procesos</p>
-                            <h3 class="fw-bold">42</h3> <!-- Aquí puedes poner otra variable luego -->
-                        </div>
-                        <div class="align-self-center">
-                            <i class="bi bi-diagram-3-fill fs-1 opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Próximas Audiencias (Naranja) -->
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0" style="background-color: #da4f49; color: white;">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between px-md-1">
-                        <div>
-                            <p class="mb-1">Audiencias</p>
-                            <h3 class="fw-bold">5</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="bi bi-calendar-event-fill fs-1 opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Documentos (Rojo/Gris) -->
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0" style="background-color: #9d261d; color: white;">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between px-md-1">
-                        <div>
-                            <p class="mb-1">Pendientes</p>
-                            <h3 class="fw-bold">12</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="bi bi-file-earmark-text-fill fs-1 opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <a href="{% url 'exportar_pdf' %}" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Reporte general
+        </a>
+        <a href="{% url 'papelera_casos' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-trash me-1"></i> Papelera
+        </a>
     </div>
 </div>
-{% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {% if message.tags == 'success' %}
-                <i class="bi bi-check-circle-fill me-2"></i>
-            {% elif message.tags == 'warning' %}
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            {% endif %}
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    {% endfor %}
-{% endif %}
 
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Procesos Registrados</h2>
-        <a href="{% url 'registrar_caso' %}" class="btn btn-primary">+ Nuevo Caso</a>
-        <a href="{% url 'papelera_casos' %}" class="btn btn-outline-danger">
-        <i class="bi bi-trash"></i> Ver Papelera
-        </a>
-    </div>
-    <div class="mb-3 p-3 bg-light border rounded shadow-sm">
-        <!-- Formulario de Búsqueda -->
-<form method="GET" class="mb-4">
-    <div class="input-group">
-        <input type="text" name="buscar" class="form-control" 
-               placeholder="Buscar por Cliente , NUREJ , Materia o Abogado " 
-               value="{{ busqueda }}">
-        <button class="btn btn-primary" type="submit">
-            <i class="bi bi-search"></i> Buscar
-        </button>
-        {% if busqueda %}
-            <a href="{% url 'listar_casos' %}" class="btn btn-outline-secondary">Limpiar</a>
-        {% endif %}
-    </div>
-</form>
-
-<!-- Aquí debajo sigue tu div de "Ordenar por" -->
-        <strong class="me-2 text-secondary">Ordenar lista por:</strong>
-        <div class="btn-group" role="group">
-            <a href="?orden=nombre" class="btn btn-outline-primary btn-sm">Nombre (A-Z)</a>
-            <a href="?orden=fecha" class="btn btn-outline-primary btn-sm">Más Recientes</a>
+<!-- Buscador y ordenamiento -->
+<div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+    <div class="card-body py-3">
+        <form method="GET" class="mb-2">
+            <div class="input-group">
+                <input type="text" name="buscar" class="form-control"
+                       placeholder="Buscar por cliente, NUREJ, materia o abogado..."
+                       value="{{ busqueda }}">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                {% if busqueda %}
+                    <a href="{% url 'listar_casos' %}" class="btn btn-outline-secondary">Limpiar</a>
+                {% endif %}
+            </div>
+        </form>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="text-muted" style="font-size:.8rem;">Ordenar por:</span>
+            <a href="?orden=nombre"  class="btn btn-outline-primary btn-sm">Nombre (A-Z)</a>
+            <a href="?orden=fecha"   class="btn btn-outline-primary btn-sm">Más recientes</a>
             <a href="?orden=materia" class="btn btn-outline-primary btn-sm">Materia</a>
-            <a href="?orden=id" class="btn btn-outline-secondary btn-sm">Restablecer</a>
+            <a href="?orden=id"      class="btn btn-outline-secondary btn-sm">Restablecer</a>
         </div>
-    </div>
-<div class="card shadow-sm border-0 rounded-3 overflow-hidden">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 text-secondary fw-bold">Listado de Casos</h5>
-        <div class="btn-group">
-            <a href="{% url 'registrar_caso' %}" class="btn btn-primary btn-sm rounded-pill px-3 me-2">
-                <i class="bi bi-plus-lg"></i> Nuevo Caso
-            </a>
-            <a href="{% url 'exportar_pdf' %}" class="btn btn-outline-danger btn-sm rounded-pill px-3">
-                <i class="bi bi-file-earmark-pdf"></i> Reporte General
-            </a>
-        </div>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="bg-light">
-                <tr class="text-muted" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">
-                    <th class="ps-4 py-3">NUREJ / Proceso</th>
-                    <th>Cliente</th>
-                    <th>Materia</th>
-                    <th>Estado</th>
-                    <th class="text-center">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for caso in casos %}
-                <tr style="transition: all 0.2s ease;">
-                    <td class="ps-4">
-                        <span class="d-block fw-bold text-dark">{{ caso.nurej }}</span>
-                        <small class="text-muted">{{ caso.materia }}</small>
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white me-2" style="width: 32px; height: 32px; font-size: 0.8rem;">
-                                {{ caso.cliente|slice:":1"|upper }}
-                            </div>
-                            <span class="fw-medium">{{ caso.cliente }}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="text-truncate d-inline-block" style="max-width: 150px;">
-                            {{ caso.descripcion|default:"Sin descripción"|truncatechars:25 }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if caso.activo %}
-                        <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2">
-                            <i class="bi bi-check-circle-fill me-1"></i> Activo
-                        </span>
-                        {% else %}
-                        <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
-                            <i class="bi bi-clock-history me-1"></i> Trámite
-                        </span>
-                        {% endif %}
-                    </td>
-                    <td class="text-center pe-4">
-                        <div class="btn-group shadow-sm rounded">
-                            <a href="{% url 'reporte_un_caso' caso.pk %}" class="btn btn-white btn-sm border-end text-info" title="Ver PDF">
-                                <i class="bi bi-file-earmark-pdf"></i>
-                            </a>
-                            <a href="{% url 'editar_caso' caso.pk %}" class="btn btn-white btn-sm border-end text-warning" title="Editar">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
-                            <a href="{% url 'eliminar_caso' caso.pk %}" class="btn btn-white btn-sm text-danger" title="Eliminar">
-                                <i class="bi bi-trash3"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center py-5 text-muted">
-                        <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
-                        No hay casos registrados actualmente.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
 </div>
-<div class="card shadow-sm border-0 rounded-3 overflow-hidden mt-2">
+
+<!-- Tabla de casos -->
+<div class="card border-0 shadow-sm" style="border-radius:12px;">
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead style="background-color: #f8f9fa;">
-                <tr class="text-muted" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">
-                    <th class="ps-4 py-3">Proceso / NUREJ</th>
+        <table class="table table-hover align-middle mb-0" style="font-size:.875rem;">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4 py-3">NUREJ / Proceso</th>
                     <th>Cliente</th>
                     <th>Materia</th>
                     <th>Estado</th>
@@ -256,25 +64,55 @@
                 <tr>
                     <td class="ps-4">
                         <span class="d-block fw-bold text-primary">{{ caso.nurej }}</span>
-                        <small class="text-muted">ID: #{{ forloop.counter }}</small>
+                        <small class="text-muted">{{ caso.materia }}</small>
                     </td>
-                    <td class="fw-medium">{{ caso.cliente }}</td>
-                    <td>{{ caso.materia }}</td>
                     <td>
-                        {% if caso.materia == 'Penal' %}
-                        <span class="badge rounded-pill bg-danger-subtle text-danger px-3">Crítico</span>
-                        {% elif caso.materia == 'Civil' %}
-                        <span class="badge rounded-pill bg-info-subtle text-info px-3">Trámite</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white"
+                                 style="width:32px;height:32px;font-size:.8rem;flex-shrink:0;">
+                                {{ caso.nombre_cliente|slice:":1"|upper }}
+                            </div>
+                            {% if caso.cliente %}
+                            <a href="{% url 'detalle_cliente' caso.cliente.pk %}" class="fw-medium text-decoration-none">{{ caso.nombre_cliente }}</a>
+                            {% else %}
+                            <span class="fw-medium">{{ caso.nombre_cliente }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>{{ caso.descripcion|default:"Sin descripción"|truncatechars:30 }}</td>
+                    <td>
+                        {% if caso.activo %}
+                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                                <i class="bi bi-check-circle-fill me-1"></i> Activo
+                            </span>
                         {% else %}
-                        <span class="badge rounded-pill bg-success-subtle text-success px-3">Activo</span>
+                            <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
+                                <i class="bi bi-clock-history me-1"></i> Trámite
+                            </span>
                         {% endif %}
                     </td>
                     <td class="text-center pe-4">
-                        <div class="btn-group btn-group-sm">
-                            <a href="{% url 'reporte_un_caso' caso.pk %}" class="btn btn-light text-info border"><i class="bi bi-file-earmark-pdf"></i></a>
-                            <a href="{% url 'editar_caso' caso.pk %}" class="btn btn-light text-warning border"><i class="bi bi-pencil"></i></a>
-                            <a href="{% url 'eliminar_caso' caso.pk %}" class="btn btn-light text-danger border"><i class="bi bi-trash"></i></a>
+                        <div class="btn-group shadow-sm">
+                            <a href="{% url 'reporte_un_caso' caso.pk %}" class="btn btn-sm btn-white border text-info"  title="Ver PDF">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+                            <a href="{% url 'detalle_caso' caso.pk %}" class="btn btn-sm btn-white border text-secondary" title="Detalle expediente">
+                                <i class="bi bi-folder2-open"></i>
+                            </a>
+                            <a href="{% url 'editar_caso' caso.pk %}"     class="btn btn-sm btn-white border text-warning" title="Editar">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a href="{% url 'eliminar_caso' caso.pk %}"   class="btn btn-sm btn-white border text-danger"  title="Eliminar">
+                                <i class="bi bi-trash3"></i>
+                            </a>
                         </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-5">
+                        <i class="bi bi-folder-x fs-1 d-block mb-2 opacity-25"></i>
+                        No hay casos registrados actualmente.
                     </td>
                 </tr>
                 {% endfor %}
@@ -282,20 +120,15 @@
         </table>
     </div>
 </div>
-            </tbody>    
-</tbody>
-        </table>
-    </div>
-</div>
 
+{% endblock %}
+
+{% block scripts_extra %}
 <script>
     setTimeout(function() {
-        let alerts = document.querySelectorAll('.alert');
-        alerts.forEach(function(alert) {
-            let bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
+        document.querySelectorAll('.alert').forEach(function(el) {
+            bootstrap.Alert.getOrCreateInstance(el).close();
         });
-    }, 3000); // 3000 milisegundos = 3 segundos
+    }, 3000);
 </script>
-</body>
-</html>
+{% endblock %}

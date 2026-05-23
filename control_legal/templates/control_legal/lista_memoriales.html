@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block titulo %}Memoriales{% endblock %}
+{% block topbar_titulo %}Memoriales generados{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="fw-bold mb-0">Memoriales</h5>
+    <a href="{% url 'generar_memorial' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-robot me-1"></i> Generar memorial con IA
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:12px;">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" style="font-size:.875rem;">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Título</th>
+                    <th>Cliente</th>
+                    <th>Plantilla usada</th>
+                    <th>Generado por</th>
+                    <th>Fecha</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in memoriales %}
+                <tr>
+                    <td class="ps-4 fw-semibold">{{ m.titulo }}</td>
+                    <td>{{ m.cliente.nombre_completo }}</td>
+                    <td>
+                        {% if m.plantilla %}
+                        <span class="badge bg-primary-subtle text-primary">{{ m.plantilla.nombre }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>{{ m.generado_por.get_full_name|default:m.generado_por.username }}</td>
+                    <td>{{ m.fecha_generado|date:"d/m/Y H:i" }}</td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'ver_memorial' m.pk %}"
+                               class="btn btn-light border text-info" title="Ver">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'exportar_memorial_pdf' m.pk %}"
+                               class="btn btn-light border text-danger" title="PDF" target="_blank">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="bi bi-file-earmark-text fs-1 d-block mb-2 opacity-25"></i>
+                        No hay memoriales generados aún.
+                        <div class="mt-2">
+                            <a href="{% url 'generar_memorial' %}" class="btn btn-sm btn-primary">
+                                Generar el primero
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

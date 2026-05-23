@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block titulo %}{{ memorial.titulo }}{% endblock %}
+{% block topbar_titulo %}Memoriales{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="fw-bold mb-0">{{ memorial.titulo }}</h5>
+    <div class="d-flex gap-2">
+        <a href="{% url 'lista_memoriales' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Volver
+        </a>
+        <a href="{% url 'exportar_memorial_pdf' memorial.pk %}" target="_blank" class="btn btn-danger btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">Información</h6>
+                <p class="mb-1" style="font-size:.8rem;color:#888;">Cliente</p>
+                <p class="fw-semibold mb-3">{{ memorial.cliente.nombre_completo }}</p>
+                {% if memorial.plantilla %}
+                <p class="mb-1" style="font-size:.8rem;color:#888;">Tipo de memorial</p>
+                <p class="fw-semibold mb-3">{{ memorial.plantilla.nombre }}</p>
+                {% endif %}
+                {% if memorial.expediente %}
+                <p class="mb-1" style="font-size:.8rem;color:#888;">Expediente</p>
+                <p class="fw-semibold mb-3">{{ memorial.expediente.nurej }}</p>
+                {% endif %}
+                <p class="mb-1" style="font-size:.8rem;color:#888;">Generado por</p>
+                <p class="fw-semibold mb-3">
+                    {{ memorial.generado_por.get_full_name|default:memorial.generado_por.username }}
+                </p>
+                <p class="mb-1" style="font-size:.8rem;color:#888;">Fecha</p>
+                <p class="fw-semibold mb-0">{{ memorial.fecha_generado|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-body p-4 p-lg-5">
+                <div style="font-family:'Georgia',serif;font-size:1rem;line-height:2;white-space:pre-wrap;">
+                    {{ memorial.contenido_final }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

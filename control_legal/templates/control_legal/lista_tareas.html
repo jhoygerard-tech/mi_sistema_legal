@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block titulo %}Tareas{% endblock %}
+{% block topbar_titulo %}Control de tareas{% endblock %}
+
+{% block contenido %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="fw-bold mb-0">Tareas asignadas</h5>
+    {% if request.user.perfil.rol != 'pasante' %}
+    <a href="{% url 'crear_tarea' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i> Nueva tarea
+    </a>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:12px;">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" style="font-size:.875rem;">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Tarea</th>
+                    <th>Expediente</th>
+                    <th>Asignada a</th>
+                    <th>Prioridad</th>
+                    <th>Vence</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tarea in tareas %}
+                <tr>
+                    <td class="ps-4">
+                        <a href="{% url 'detalle_tarea' tarea.pk %}" class="fw-semibold text-decoration-none text-dark">
+                            {{ tarea.titulo }}
+                        </a>
+                        <small class="d-block text-muted">{{ tarea.descripcion|truncatechars:40 }}</small>
+                    </td>
+                    <td>
+                        {% if tarea.expediente %}
+                        <span class="text-primary">{{ tarea.expediente.cliente.nombre_completo }}</span>
+                        <small class="d-block text-muted">{{ tarea.expediente.nurej }}</small>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>{{ tarea.asignada_a.get_full_name|default:tarea.asignada_a.username }}</td>
+                    <td>
+                        {% if tarea.prioridad == 'alta' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2">Alta</span>
+                        {% elif tarea.prioridad == 'media' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2">Media</span>
+                        {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary px-2">Baja</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="{% if tarea.esta_vencida %}text-danger fw-bold{% endif %}">
+                            {{ tarea.fecha_limite|date:"d/m/Y" }}
+                            {% if tarea.esta_vencida %}<i class="bi bi-exclamation-circle ms-1"></i>{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <form method="POST" action="{% url 'cambiar_estado_tarea' tarea.pk %}">
+                            {% csrf_token %}
+                            <select name="estado" class="form-select form-select-sm"
+                                    style="width:130px;" onchange="this.form.submit()">
+                                {% for val, label in tarea.ESTADOS %}
+                                <option value="{{ val }}" {% if tarea.estado == val %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'detalle_tarea' tarea.pk %}" class="btn btn-light border text-info" title="Ver evidencias">
+                                <i class="bi bi-paperclip"></i>
+                            </a>
+                            {% if request.user.perfil.rol != 'pasante' %}
+                            <a href="{% url 'editar_tarea' tarea.pk %}" class="btn btn-light border text-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <i class="bi bi-check2-square fs-1 d-block mb-2 opacity-25"></i>
+                        No hay tareas asignadas.
+                        {% if request.user.perfil.rol != 'pasante' %}
+                        <div class="mt-2">
+                            <a href="{% url 'crear_tarea' %}" class="btn btn-sm btn-primary">Crear la primera</a>
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

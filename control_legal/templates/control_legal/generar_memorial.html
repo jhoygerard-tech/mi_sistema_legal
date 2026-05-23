@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block titulo %}Generar Memorial{% endblock %}
+{% block topbar_titulo %}Generador Inteligente de Memoriales{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold mb-0">Generador IA de Memoriales</h5>
+        <small class="text-muted">Redacción automática adaptada al sistema judicial boliviano</small>
+    </div>
+    <a href="{% url 'lista_memoriales' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Mis memoriales
+    </a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger mb-3" style="border-radius:10px;">
+    <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+    <!-- Formulario -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                <h6 class="fw-bold mb-0">
+                    <i class="bi bi-robot me-2 text-primary"></i>Datos del memorial
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" id="form-memorial">
+                    {% csrf_token %}
+
+                    <!-- Selector de plantilla agrupado por categoría -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">
+                            Tipo de memorial <span class="text-danger">*</span>
+                        </label>
+                        <select name="plantilla_id" class="form-select" required id="sel-plantilla">
+                            <option value="">— Selecciona el tipo —</option>
+                            {% regroup plantillas by get_categoria_display as grupos %}
+                            {% for grupo in grupos %}
+                            <optgroup label="{{ grupo.grouper }}">
+                                {% for p in grupo.list %}
+                                <option value="{{ p.pk }}"
+                                    data-estructura="{{ p.estructura|truncatechars:200 }}"
+                                    {% if post.plantilla_id == p.pk|stringformat:"s" %}selected{% endif %}>
+                                    {{ p.nombre }}
+                                </option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        </select>
+                        <!-- Preview de la plantilla seleccionada -->
+                        <div id="preview-plantilla" class="mt-2 p-2 bg-light rounded"
+                             style="font-size:.75rem;color:#666;display:none;max-height:80px;overflow:hidden;">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">
+                            Cliente <span class="text-danger">*</span>
+                        </label>
+                        <select name="cliente_id" class="form-select" required>
+                            <option value="">— Selecciona el cliente —</option>
+                            {% for c in clientes %}
+                            <option value="{{ c.pk }}"
+                                {% if post.cliente_id == c.pk|stringformat:"s" %}selected{% endif %}>
+                                {{ c.nombre_completo }} (CI: {{ c.ci }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">
+                            Expediente relacionado
+                        </label>
+                        <select name="expediente_id" class="form-select">
+                            <option value="">— Sin expediente específico —</option>
+                            {% for e in expedientes %}
+                            <option value="{{ e.pk }}"
+                                {% if post.expediente_id == e.pk|stringformat:"s" %}selected{% endif %}>
+                                {{ e.cliente.nombre_completo }} — {{ e.nurej|default:"Sin NUREJ" }} ({{ e.materia }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">
+                            Hechos del caso <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="hechos" class="form-control" rows="5" required
+                            placeholder="Describe los hechos relevantes del caso. Sé específico: fechas, montos, personas involucradas, antecedentes...">{{ post.hechos }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">
+                            Petición específica <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="peticion" class="form-control" rows="3" required
+                            placeholder="¿Qué pides exactamente al juzgado? Ej: Se fije asistencia familiar de Bs. 800/mes, se libere mandamiento de aprehensión...">{{ post.peticion }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">
+                            Datos adicionales
+                        </label>
+                        <textarea name="datos_extra" class="form-control" rows="2"
+                            placeholder="Ej: N° de resolución anterior, fecha de última audiencia, monto adeudado...">{{ post.datos_extra }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100" id="btn-generar">
+                        <i class="bi bi-robot me-2"></i> Generar memorial con IA
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultado -->
+    <div class="col-lg-7">
+        {% if memorial_generado %}
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0">
+                    <i class="bi bi-file-earmark-check me-2 text-success"></i>
+                    Memorial generado{% if plantilla_sel %} — {{ plantilla_sel.nombre }}{% endif %}
+                </h6>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="copiarMemorial()">
+                        <i class="bi bi-clipboard me-1"></i> Copiar
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="imprimirMemorial()">
+                        <i class="bi bi-printer me-1"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <textarea id="texto-memorial" class="form-control mb-3"
+                    style="font-family:monospace;font-size:.82rem;line-height:1.7;"
+                    rows="30">{{ memorial_generado }}</textarea>
+
+                <!-- Guardar -->
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="plantilla_id"  value="{{ post.plantilla_id }}">
+                    <input type="hidden" name="cliente_id"    value="{{ post.cliente_id }}">
+                    <input type="hidden" name="expediente_id" value="{{ post.expediente_id }}">
+                    <input type="hidden" name="hechos"        value="{{ post.hechos }}">
+                    <input type="hidden" name="peticion"      value="{{ post.peticion }}">
+                    <input type="hidden" name="datos_extra"   value="{{ post.datos_extra }}">
+                    <input type="hidden" name="guardar"       value="1">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">
+                            Vincular a cliente para guardar
+                        </label>
+                        <select name="cliente_id" class="form-select form-select-sm">
+                            <option value="">— Selecciona cliente —</option>
+                            {% for c in clientes %}
+                            <option value="{{ c.pk }}"
+                                {% if post.cliente_id == c.pk|stringformat:"s" %}selected{% endif %}>
+                                {{ c.nombre_completo }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success px-4">
+                        <i class="bi bi-save me-1"></i> Guardar memorial
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm h-100 d-flex align-items-center justify-content-center text-center"
+             style="border-radius:12px;min-height:400px;">
+            <div class="p-5">
+                <i class="bi bi-file-earmark-text fs-1 text-primary opacity-25 d-block mb-3"></i>
+                <h6 class="text-muted fw-semibold">El memorial aparecerá aquí</h6>
+                <p class="text-muted mb-0" style="font-size:.85rem;">
+                    Selecciona el tipo, el cliente y describe los hechos.<br>
+                    La IA redactará el memorial completo.
+                </p>
+                <div class="mt-4 p-3 bg-light rounded text-start" style="font-size:.78rem;">
+                    <p class="fw-semibold mb-2 text-dark">✅ El sistema generará:</p>
+                    <ul class="text-muted mb-0 ps-3">
+                        <li>Encabezado formal al juzgado</li>
+                        <li>Identificación de partes</li>
+                        <li>Antecedentes y hechos</li>
+                        <li>Fundamentos de derecho con artículos</li>
+                        <li>Petitorio numerado y específico</li>
+                        <li>Cierre con fórmula boliviana</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+// Preview de plantilla al seleccionar
+document.getElementById('sel-plantilla').addEventListener('change', function() {
+    const opt     = this.options[this.selectedIndex];
+    const preview = document.getElementById('preview-plantilla');
+    if (opt.value) {
+        preview.textContent = opt.dataset.estructura;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+});
+
+function copiarMemorial() {
+    const ta = document.getElementById('texto-memorial');
+    ta.select();
+    document.execCommand('copy');
+    alert('Memorial copiado al portapapeles.');
+}
+
+function imprimirMemorial() {
+    const contenido = document.getElementById('texto-memorial').value;
+    const ventana   = window.open('', '_blank');
+    ventana.document.write(`
+        <html><head><title>Memorial</title>
+        <style>
+            body { font-family: Georgia, serif; font-size: 12pt;
+                   line-height: 1.8; margin: 3cm; color: #000; }
+            pre  { white-space: pre-wrap; font-family: Georgia, serif; }
+        </style></head>
+        <body><pre>${contenido}</pre></body></html>
+    `);
+    ventana.document.close();
+    ventana.print();
+}
+
+document.getElementById('form-memorial')?.addEventListener('submit', function() {
+    const btn = document.getElementById('btn-generar');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redactando memorial...';
+    btn.disabled  = true;
+});
+</script>
+{% endblock %}

@@ -1,22 +1,101 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <style>
-        @page { size: letter; margin: 1.5cm; }
-        body { font-family: 'Helvetica', sans-serif; font-size: 11px; }
-        .titulo { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-        .subtitulo { text-align: center; margin-bottom: 20px; color: #555; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background-color: #2c3e50; color: white; padding: 10px; border: 1px solid #2c3e50; }
-        td { padding: 8px; border: 1px solid #bdc3c7; text-align: center; }
-        .footer { text-align: right; margin-top: 20px; font-style: italic; }
+        @page {
+            size: letter;
+            margin: 2cm 1.5cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            color: #222;
+        }
+
+        /* Encabezado del documento */
+        .encabezado {
+            text-align: center;
+            border-bottom: 2px solid #1a2744;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .encabezado .nombre-bufete {
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #1a2744;
+        }
+        .encabezado .subtitulo {
+            font-size: 11px;
+            color: #555;
+            margin-top: 3px;
+        }
+        .encabezado .fecha {
+            font-size: 10px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        /* Tabla */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        thead th {
+            background-color: #1a2744;
+            color: white;
+            padding: 9px 10px;
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        tbody td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e0e0e0;
+            vertical-align: middle;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f7f9fc;
+        }
+
+        /* Badge de estado */
+        .estado-activo  { color: #1a7a3c; font-weight: bold; }
+        .estado-tramite { color: #a05e00; font-weight: bold; }
+
+        /* Pie de página */
+        .footer {
+            margin-top: 24px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #888;
+            font-style: italic;
+        }
+        .total {
+            margin-top: 12px;
+            text-align: right;
+            font-size: 11px;
+            font-weight: bold;
+            color: #1a2744;
+        }
     </style>
 </head>
 <body>
-    <div class="titulo">CONSULTORIO JURÍDICO POPULAR</div>
-    <div class="subtitulo">Reporte de Procesos Activos - {{ fecha|date:"d/m/Y H:i" }}</div>
 
+    <!-- Encabezado -->
+    <div class="encabezado">
+        <div class="nombre-bufete">LexNova Bolivia</div>
+        <div class="subtitulo">Reporte de procesos activos</div>
+        <div class="fecha">Generado el {{ fecha|date:"d \d\e F \d\e Y" }} a las {{ fecha|date:"H:i" }}</div>
+    </div>
+
+    <!-- Tabla de casos -->
     <table>
         <thead>
             <tr>
@@ -32,14 +111,32 @@
                 <td>{{ caso.nurej }}</td>
                 <td>{{ caso.cliente }}</td>
                 <td>{{ caso.materia }}</td>
-                <td>Activo</td>
+                <td>
+                    {% if caso.activo %}
+                        <span class="estado-activo">Activo</span>
+                    {% else %}
+                        <span class="estado-tramite">En trámite</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align:center;color:#888;padding:20px;">
+                    No hay casos registrados.
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
+    <!-- Total -->
+    <div class="total">Total de casos: {{ casos|length }}</div>
+
+    <!-- Pie -->
     <div class="footer">
-        Generado por: {{ request.user.username }}
+        <span>LexNova Bolivia — Sistema de Gestión Legal</span>
+        <span>Generado por: {{ request.user.get_full_name }}</span>
     </div>
+
 </body>
 </html>

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block titulo %}Detalle de tarea{% endblock %}
+{% block topbar_titulo %}Tareas{% endblock %}
+
+{% block contenido %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="fw-bold mb-0">{{ tarea.titulo }}</h5>
+    <a href="{% url 'lista_tareas' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Volver
+    </a>
+</div>
+
+<div class="row g-3">
+    <!-- Info de la tarea -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">Información de la tarea</h6>
+                <table class="table table-sm" style="font-size:.875rem;">
+                    <tr><td class="text-muted fw-semibold" style="width:40%">Asignada a</td>
+                        <td>{{ tarea.asignada_a.get_full_name|default:tarea.asignada_a.username }}</td></tr>
+                    <tr><td class="text-muted fw-semibold">Creada por</td>
+                        <td>{{ tarea.creada_por.get_full_name|default:tarea.creada_por.username }}</td></tr>
+                    <tr><td class="text-muted fw-semibold">Prioridad</td>
+                        <td>
+                            {% if tarea.prioridad == 'alta' %}
+                                <span class="badge bg-danger-subtle text-danger">Alta</span>
+                            {% elif tarea.prioridad == 'media' %}
+                                <span class="badge bg-warning-subtle text-warning">Media</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">Baja</span>
+                            {% endif %}
+                        </td></tr>
+                    <tr><td class="text-muted fw-semibold">Estado</td>
+                        <td>{{ tarea.get_estado_display }}</td></tr>
+                    <tr><td class="text-muted fw-semibold">Fecha límite</td>
+                        <td class="{% if tarea.esta_vencida %}text-danger fw-bold{% endif %}">
+                            {{ tarea.fecha_limite|date:"d/m/Y" }}
+                        </td></tr>
+                    {% if tarea.expediente %}
+                    <tr><td class="text-muted fw-semibold">Expediente</td>
+                        <td>
+                            <a href="{% url 'detalle_caso' tarea.expediente.pk %}">
+                                {{ tarea.expediente.cliente.nombre_completo }}
+                            </a>
+                        </td></tr>
+                    {% endif %}
+                </table>
+                <div class="mt-3">
+                    <p class="text-muted fw-semibold mb-1" style="font-size:.8rem;">Descripción</p>
+                    <p style="font-size:.875rem;">{{ tarea.descripcion }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Evidencias -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                <h6 class="fw-bold mb-0">Evidencias subidas ({{ evidencias.count }})</h6>
+            </div>
+            <div class="card-body px-4 pb-3">
+                {% for ev in evidencias %}
+                <div class="d-flex align-items-center gap-3 py-2 border-bottom">
+                    <i class="bi bi-paperclip fs-5 text-primary"></i>
+                    <div class="flex-grow-1">
+                        <a href="{{ ev.archivo.url }}" target="_blank" class="fw-semibold text-decoration-none">
+                            {{ ev.archivo.name|slice:"10:" }}
+                        </a>
+                        {% if ev.descripcion %}
+                        <small class="d-block text-muted">{{ ev.descripcion }}</small>
+                        {% endif %}
+                        <small class="text-muted">{{ ev.fecha_subida|date:"d/m/Y H:i" }} — {{ ev.subida_por.get_full_name|default:ev.subida_por.username }}</small>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center py-3" style="font-size:.875rem;">
+                    <i class="bi bi-paperclip d-block fs-2 mb-2 opacity-25"></i>
+                    Aún no hay evidencias subidas.
+                </p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Subir evidencia -->
+        <div class="card border-0 shadow-sm mt-3" style="border-radius:12px;">
+            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                <h6 class="fw-bold mb-0">Subir nueva evidencia</h6>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Archivo (foto o documento)</label>
+                        {{ form.archivo }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Descripción</label>
+                        {{ form.descripcion }}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">
+                        <i class="bi bi-upload me-1"></i> Subir evidencia
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

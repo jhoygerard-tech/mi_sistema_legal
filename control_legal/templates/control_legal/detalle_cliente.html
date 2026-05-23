@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block titulo %}Cliente — {{ cliente.nombre }}{% endblock %}
+{% block topbar_titulo %}Cliente{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold mb-0">{{ cliente.nombre }}</h5>
+        <p class="text-muted mb-0" style="font-size:.9rem;">Detalle del cliente y sus expedientes activos.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'listar_clientes' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Clientes
+        </a>
+        <a href="{% url 'registrar_caso' %}?cliente={{ cliente.pk }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-file-earmark-plus me-1"></i> Nuevo expediente
+        </a>
+    </div>
+</div>
+
+<!-- Código de acceso del portal -->
+<div class="card border-0 shadow-sm mt-3" style="border-radius:12px;">
+    <div class="card-body p-4 d-flex align-items-center justify-content-between">
+        <div>
+            <p class="text-muted mb-1" style="font-size:.8rem;">Código de acceso al portal</p>
+            <h4 class="fw-bold text-primary mb-0 letter-spacing-2">
+                {{ cliente.codigo_acceso }}
+            </h4>
+            <small class="text-muted">Entrega este código al cliente para que consulte su caso</small>
+        </div>
+        <div class="text-end">
+            <a href="{% url 'portal_login' %}" target="_blank" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-box-arrow-up-right me-1"></i> Ver portal
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-body p-4">
+                <h6 class="mb-3">Información</h6>
+                <dl class="row mb-0">
+                    <dt class="col-4 text-muted">Documento</dt>
+                    <dd class="col-8">{{ cliente.documento|default:'-' }}</dd>
+                    <dt class="col-4 text-muted">Teléfono</dt>
+                    <dd class="col-8">{{ cliente.telefono|default:'-' }}</dd>
+                    <dt class="col-4 text-muted">Email</dt>
+                    <dd class="col-8">{{ cliente.email|default:'-' }}</dd>
+                    <dt class="col-4 text-muted">Dirección</dt>
+                    <dd class="col-8">{{ cliente.direccion|default:'-' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+            <div class="card-body p-4">
+                <h6 class="mb-3">Expedientes activos</h6>
+                {% if casos %}
+                <div class="list-group">
+                    {% for caso in casos %}
+                        <a href="{% url 'detalle_caso' caso.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">{{ caso.numero_caso }} — {{ caso.materia }}</div>
+                                    <small class="text-muted">{{ caso.nurej|default:'Sin NUREJ' }}</small>
+                                </div>
+                                <span class="badge rounded-pill bg-primary-subtle text-primary">{{ caso.estado }}</span>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-folder2-open fs-1 d-block mb-2 opacity-25"></i>
+                    No hay expedientes activos para este cliente.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
