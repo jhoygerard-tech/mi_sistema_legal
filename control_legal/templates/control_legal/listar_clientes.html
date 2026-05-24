@@ -29,10 +29,10 @@
                 {% for cliente in clientes %}
                 <tr>
                     <td class="ps-4">
-                        <div class="fw-semibold">{{ cliente.nombre }}</div>
-                        <small class="text-muted">Registrado el {{ cliente.creado_en|date:'d/m/Y' }}</small>
+                        <div class="fw-semibold">{{ cliente.nombre_completo }}</div>
+                        <small class="text-muted">Registrado el {{ cliente.fecha_registro|date:'d/m/Y' }}</small>
                     </td>
-                    <td>{{ cliente.documento|default:'-' }}</td>
+                    <td>{{ cliente.ci|default:'-' }}</td>
                     <td>{{ cliente.telefono|default:'-' }}</td>
                     <td>{{ cliente.email|default:'-' }}</td>
                     <td class="text-end pe-4">

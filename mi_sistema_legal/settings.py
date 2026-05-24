@@ -1,14 +1,23 @@
-from pathlib import Path
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+from django.contrib.messages import constants as messages
+
+# ══════════════════════════════════════════════
+# SEGURIDAD
+# ══════════════════════════════════════════════
+load_dotenv()  # carga el .env automáticamente
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-jxb)-*js*jh^4#t$t00i_rsu4lhpr27wc@6*vh_ri_7$h9rhl3'
-
-DEBUG = True
-
+SECRET_KEY = os.environ.get('SECRET_KEY')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+DEBUG      = True
 ALLOWED_HOSTS = []
 
+# ══════════════════════════════════════════════
+# APLICACIONES
+# ══════════════════════════════════════════════
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -17,9 +26,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'control_legal',
-    # 'usuarios',  ← descomenta cuando crees esa app
+    'usuarios',
 ]
 
+
+# ══════════════════════════════════════════════
+# MIDDLEWARE
+# ══════════════════════════════════════════════
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -30,12 +43,21 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'mi_sistema_legal.urls'
 
+# ══════════════════════════════════════════════
+# URLS Y WSGI
+# ══════════════════════════════════════════════
+ROOT_URLCONF      = 'mi_sistema_legal.urls'
+WSGI_APPLICATION  = 'mi_sistema_legal.wsgi.application'
+
+
+# ══════════════════════════════════════════════
+# TEMPLATES
+# ══════════════════════════════════════════════
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # carpeta base.html
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -48,8 +70,10 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'mi_sistema_legal.wsgi.application'
 
+# ══════════════════════════════════════════════
+# BASE DE DATOS
+# ══════════════════════════════════════════════
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -57,6 +81,10 @@ DATABASES = {
     }
 }
 
+
+# ══════════════════════════════════════════════
+# VALIDACIÓN DE CONTRASEÑAS
+# ══════════════════════════════════════════════
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -64,25 +92,35 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Idioma y zona horaria Bolivia
+
+# ══════════════════════════════════════════════
+# IDIOMA Y ZONA HORARIA — BOLIVIA
+# ══════════════════════════════════════════════
 LANGUAGE_CODE = 'es'
 TIME_ZONE     = 'America/La_Paz'
 USE_I18N      = True
 USE_TZ        = True
 
-STATIC_URL = 'static/'
 
-# Archivos subidos (PDFs, fotos de documentos)
+# ══════════════════════════════════════════════
+# ARCHIVOS ESTÁTICOS Y MEDIA
+# ══════════════════════════════════════════════
+STATIC_URL = '/static/'
 MEDIA_URL  = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Autenticación
-LOGIN_URL             = 'login'
-LOGIN_REDIRECT_URL    = 'dashboard'
-LOGOUT_REDIRECT_URL   = 'login'
 
-# Colores de mensajes flash para Bootstrap
-from django.contrib.messages import constants as messages
+# ══════════════════════════════════════════════
+# AUTENTICACIÓN
+# ══════════════════════════════════════════════
+LOGIN_URL           = 'login'
+LOGIN_REDIRECT_URL  = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+
+
+# ══════════════════════════════════════════════
+# MENSAJES FLASH — BOOTSTRAP 5
+# ══════════════════════════════════════════════
 MESSAGE_TAGS = {
     messages.DEBUG:   'secondary',
     messages.INFO:    'info',
@@ -91,25 +129,10 @@ MESSAGE_TAGS = {
     messages.ERROR:   'danger',
 }
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# ══════════════════════════════════════════════
+# CLAVE PRIMARIA POR DEFECTO
+# ══════════════════════════════════════════════
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'listar_casos'  # Aquí se define a dónde va el usuario después de iniciar sesión en el sistema legal
-LOGOUT_REDIRECT_URL = 'login'        # A donde va al salir
-
-from django.contrib.messages import constants as messages
-
-MESSAGE_TAGS = {
-    messages.DEBUG: 'secondary',
-    messages.INFO: 'info',
-    messages.SUCCESS: 'success',
-    messages.WARNING: 'warning',
-    messages.ERROR: 'danger',
-}
-
-GEMINI_API_KEY = 'AIzaSyDt6r7suDjOSAk7OHp8RzVXCDDIG9Dw3-g' 
+GEMINI_API_KEY='AIzaSyDt6r7suDjOSAk7OHp8RzVXCDDIG9Dw3-g'

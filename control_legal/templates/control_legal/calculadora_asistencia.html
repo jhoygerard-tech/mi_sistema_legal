@@ -62,25 +62,25 @@
                     <select name="distrito_judicial" id="distrito_judicial" class="form-select" required>
                         <option value="">— Seleccione —</option>
                         {% for d in distritos %}
-                        <option value="{{ d }}" {% if post.distrito_judicial == d %}selected{% endif %}>{{ d }}</option>
+                        <option value="{{ d }}" {% if distrito_actual == d %}selected{% endif %}>{{ d }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold small">Juzgado de la Causa</label>
                     <input type="text" name="juzgado" id="juzgado" class="form-control" required
-                        value="{{ post.juzgado|default:valores_iniciales.juzgado }}">
+                        value="{{ juzgado_actual }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold small">NUREJ / IANUS</label>
                     <input type="text" name="nurej_ianus" id="nurej_ianus" class="form-control" required
-                        value="{{ post.nurej_ianus|default:valores_iniciales.nurej_ianus }}">
+                        value="{{ nurej_actual }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold small">Partes</label>
                     <input type="text" name="partes" id="partes" class="form-control" required
                         placeholder="Demandante / Demandado"
-                        value="{{ post.partes|default:valores_iniciales.partes }}">
+                        value="{{ partes_actual }}">
                 </div>
             </div>
         </div>

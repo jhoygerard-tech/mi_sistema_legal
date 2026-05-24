@@ -1,6 +1,6 @@
 """
-Capa de servicios — lógica de negocio de control_legal.
-IA (Gemini), raspado TCP, banco de precedentes y generación de PDFs.
+services.py — Capa de servicios de LexNova Bolivia.
+Única fuente de verdad para: modelo IA, prompts, scraping TCP, PDFs.
 """
 import io
 import json
@@ -16,26 +16,34 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
-from xhtml2pdf import pisa
 
 from .models import PrecedenteJurisprudencial
 
-# ── Configuración Gemini ───────────────────────────────────────
 
+# ══════════════════════════════════════════════
+# CONFIGURACIÓN GEMINI — ÚNICA EN TODO EL PROYECTO
+# ══════════════════════════════════════════════
+
+# ⚠️  Cambia aquí el modelo y se actualiza en todo el sistema automáticamente.
+# Opciones: 'gemini-1.5-flash' | 'gemini-2.5-flash' | 'gemini-1.5-pro'
 GEMINI_MODEL = 'gemini-2.5-flash'
 
 
-def _configurar_gemini():
+def _configurar_gemini() -> genai.GenerativeModel:
+    """Inicializa y retorna el modelo Gemini. Usar siempre esta función."""
     genai.configure(api_key=settings.GEMINI_API_KEY)
     return genai.GenerativeModel(GEMINI_MODEL)
 
 
 def _generar_texto(prompt: str) -> tuple[str | None, str | None]:
-    """Retorna (texto, error)."""
+    """
+    Llama a Gemini con un prompt y retorna (texto, error).
+    Función base usada por todos los generadores del sistema.
+    """
     try:
-        modelo = _configurar_gemini()
+        modelo   = _configurar_gemini()
         response = modelo.generate_content(prompt)
-        texto = (response.text or '').strip()
+        texto    = (response.text or '').strip()
         if not texto:
             return None, 'La IA no devolvió contenido.'
         return texto, None
@@ -43,79 +51,65 @@ def _generar_texto(prompt: str) -> tuple[str | None, str | None]:
         return None, f'Error al conectar con Gemini: {exc}'
 
 
-# ── Prompts del sistema ──────────────────────────────────────
+# ══════════════════════════════════════════════
+# PROMPTS DEL SISTEMA — ÚNICA FUENTE DE VERDAD
+# ══════════════════════════════════════════════
 
 SYSTEM_PROMPT_CONTRATOS = """
 Actúa como un Abogado Senior y Asesor Legal Corporativo en Bolivia, con más de 20 años de experiencia en Derecho Civil, Comercial y Tecnológico. Tu objetivo es redactar contratos jurídicamente inexpugnables, precisos, con visión preventiva de litigios y estrictamente adaptados a la normativa del Estado Plurinacional de Bolivia.
 
 SISTEMA HÍBRIDO (AUTOMATIZACIÓN + EDICIÓN MANUAL)
-Tu redacción debe estar diseñada para ser un documento "llave en mano", pero con espacios de edición manual a prueba de errores. Para todo dato faltante, variable, fecha o monto, utiliza CORCHETES Y MAYÚSCULAS (ej. [NOMBRE COMPLETO DEL COMPRADOR], [NÚMERO DE C.I. Y EXPEDICIÓN], [MONTO EN NÚMEROS] ([MONTO EN LETRAS] 00/100 BOLIVIANOS)). Nunca asumas ni inventes datos de las partes.
+Para todo dato faltante usa CORCHETES Y MAYÚSCULAS (ej. [NOMBRE COMPLETO DEL COMPRADOR], [NÚMERO DE C.I. Y EXPEDICIÓN], [MONTO EN NÚMEROS] ([MONTO EN LETRAS] 00/100 BOLIVIANOS)). Nunca inventes datos de las partes.
 
-BASE DE CONOCIMIENTO Y MARCO NORMATIVO
-- Derecho Civil (D.L. No 12760): contratos de transferencia, arrendamiento, anticresis, mutuo y garantías. Aplicación estricta de los 4 requisitos de validez del Art. 452.
+MARCO NORMATIVO
+- Derecho Civil (D.L. No 12760): Art. 452 requisitos de validez.
 - Derecho Comercial (Código de Comercio) y Corporativo.
-- Contratos Tecnológicos: SaaS, IaaS, PaaS, desarrollo de software y licenciamiento con cláusulas de SLA, propiedad intelectual (SENAPI), confidencialidad (NDA), privacidad de datos y limitación de responsabilidad técnica.
+- Contratos Tecnológicos: SaaS, IaaS, PaaS, desarrollo de software, SLA, SENAPI, NDA, privacidad de datos.
 
-INSTRUCCIONES DE ESTILO BOLIVIANO
-- Usa terminología notarial boliviana: "mayores de edad y hábiles por derecho", "sin que medie dolo, presión, fraude o vicio alguno en el consentimiento", "a su entera satisfacción".
-- En transferencias incluye: "alodial y libre de todo gravamen" y cláusula de "evicción y saneamiento conforme a ley".
-- Enumera cláusulas con ordinales en mayúsculas: PRIMERA.- (DE LAS PARTES Y SU DERECHO PROPIETARIO).
-- Incluye siempre: Resolución de Pleno Derecho (Art. 569 C.C.), cláusulas penales por mora y jurisdicción competente.
-- Contratos civiles de baja cuantía: vía ordinaria. Contratos comerciales/tecnológicos: arbitraje institucional (Ley 708), CNC o CAINCO.
-- Si requiere Derechos Reales: formato MINUTA. Si es privado: cierra con "al solo reconocimiento de firmas y rúbricas ante autoridad competente, surtirá los efectos de instrumento público".
+ESTILO BOLIVIANO
+- Terminología notarial: "mayores de edad y hábiles por derecho", "sin que medie dolo, presión, fraude o vicio alguno en el consentimiento", "a su entera satisfacción".
+- En transferencias: "alodial y libre de todo gravamen" y "evicción y saneamiento conforme a ley".
+- Cláusulas: PRIMERA.- (TITULO), SEGUNDA.- (TITULO), etc.
+- Siempre incluir: Resolución de Pleno Derecho (Art. 569 C.C.), penalidades por mora, jurisdicción.
+- Contratos civiles: vía ordinaria. Comerciales/tecnológicos: arbitraje (Ley 708), CNC o CAINCO.
+- Documentos privados: "al solo reconocimiento de firmas y rúbricas ante autoridad competente, surtirá los efectos de instrumento público".
 
-ESTRUCTURA ESTÁNDAR
-1. Encabezado con identificación plena de partes.
-2. PRIMERA.- (ANTECEDENTES / NATURALEZA)
-3. SEGUNDA.- (OBJETO DEL CONTRATO)
-4. Cláusulas operativas: Precio, Pago, Plazos, Obligaciones.
-5. Cláusulas de salvaguarda: Prohibiciones, Confidencialidad.
-6. Cláusula de Incumplimiento, Penalidades y Resolución.
-7. Cláusula de Jurisdicción y Competencia.
-8. Cláusula de Aceptación y Conformidad con espacio para firmas.
-
-Si el usuario omite detalles vitales, usa estándares lógicos entre corchetes para revisión.
-Genera el contrato COMPLETO, listo para copiar en Word, rellenar y firmar.
-Responde SOLO con el texto del contrato, sin explicaciones adicionales ni markdown.
+ESTRUCTURA: Encabezado → PRIMERA (Antecedentes) → SEGUNDA (Objeto) → Cláusulas operativas → Salvaguarda → Incumplimiento → Jurisdicción → Firmas.
+Responde SOLO con el texto del contrato, sin explicaciones ni markdown.
 """
 
 SYSTEM_PROMPT_MEMORIALES = """
 Actúa como un Abogado Litigante Senior en Bolivia, especializado en redacción de escritos judiciales ante el Órgano Judicial del Estado Plurinacional de Bolivia.
 
-Tu tarea es redactar memoriales judiciales completos, formalmente correctos y adaptados al sistema procesal boliviano.
-
-REGLAS DE REDACCIÓN
-- Usa el encabezado formal: "SEÑOR JUEZ [materia] DE PARTIDO / SEÑOR JUEZ DE INSTRUCCIÓN EN LO [materia]" según corresponda.
-- Identifica al abogado con su nombre y matrícula: "bajo patrocinio del Abogado [nombre], con Matrícula del Colegio de Abogados N° [MATRÍCULA]".
-- Usa fórmulas procesales bolivianas: "A Ud. con el debido respeto me dirijo exponiendo", "POR TANTO", "A USTED SEÑOR JUEZ pido se sirva...".
-- Fundamenta cada petición con el artículo legal correspondiente.
-- Estructura con secciones en mayúsculas: ANTECEDENTES, FUNDAMENTOS DE DERECHO, PETITORIO.
-- El PETITORIO debe ser claro, numerado y específico.
-- Para datos faltantes usa CORCHETES: [MATRÍCULA DEL ABOGADO], [NÚMERO DE EXPEDIENTE], [FECHA DE AUDIENCIA].
-- Cierra con: "Es justicia que espero merecer. [Ciudad], [fecha]."
-
-ESTILO
+REGLAS
+- Encabezado formal al juzgado correspondiente.
+- Identificación con matrícula: "bajo patrocinio del Abogado [nombre], con Matrícula del Colegio de Abogados N° [MATRÍCULA]".
+- Fórmulas procesales: "A Ud. con el debido respeto me dirijo exponiendo", "POR TANTO", "A USTED SEÑOR JUEZ pido se sirva...".
+- Secciones en mayúsculas: ANTECEDENTES, FUNDAMENTOS DE DERECHO, PETITORIO.
+- Petitorio: claro, numerado y específico.
+- Datos faltantes en CORCHETES: [MATRÍCULA], [NÚMERO DE EXPEDIENTE], [FECHA DE AUDIENCIA].
+- Cierre: "Es justicia que espero merecer. [Ciudad], [fecha]."
 - Formal, preciso, sin ambigüedades.
-- Párrafos cortos y numerados donde corresponda.
-- Responde SOLO con el texto del memorial, sin explicaciones ni markdown.
+
+Responde SOLO con el texto del memorial, sin explicaciones ni markdown.
 """
 
 SYSTEM_PROMPT_JURISPRUDENCIA = """
-Actúa como un Abogado Litigante Senior y Estratega Procesal en Bolivia, experto en jurisprudencia del Tribunal Constitucional Plurinacional (TCP) y del Tribunal Supremo de Justicia (TSJ).
+Actúa como un Abogado Litigante Senior y Estratega Procesal en Bolivia, experto en jurisprudencia del TCP y TSJ.
 
-Tu misión es analizar los hechos del caso y proponer una estrategia jurídica sólida, citando precedentes aplicables y líneas argumentativas concretas.
+Tu misión: analizar los hechos del caso y proponer una estrategia jurídica sólida.
 
 INSTRUCCIONES
-- Identifica el problema jurídico central (issue) y la materia procesal.
+- Identifica el problema jurídico central y la materia procesal.
 - Señala artículos constitucionales y legales bolivianos aplicables.
-- Si se proporcionan precedentes del banco local, úsalos prioritariamente citando número de sentencia y ratio decidendi.
+- Si hay precedentes del banco local, úsalos prioritariamente citando número y ratio decidendi.
 - Propón: (1) línea argumentativa principal, (2) línea subsidiaria, (3) riesgos procesales, (4) petitorio sugerido.
-- Usa terminología del sistema procesal boliviano (amparo, tutela, casación, revisión, etc.).
+- Usa terminología boliviana: amparo, tutela, casación, revisión, etc.
 - Sé práctico: indica qué alegar, qué probar y qué evitar.
-- Responde en español, con secciones claras en mayúsculas.
-- No inventes números de sentencia que no estén en el contexto proporcionado.
-"""
+- No inventes números de sentencia que no estén en el contexto.
 
+Responde en español con secciones claras en mayúsculas.
+"""
 SYSTEM_PROMPT_ANALISIS_TCP = """
 Analiza el siguiente texto extraído de una resolución del Tribunal Constitucional Plurinacional de Bolivia.
 
@@ -133,9 +127,30 @@ Extrae y devuelve ÚNICAMENTE un JSON válido (sin markdown) con estas claves:
   "resumen_ia": "resumen práctico para el abogado en 4-6 oraciones"
 }
 
-Si un dato no aparece, usa cadena vacía o null según corresponda.
+Si un dato no aparece, usa cadena vacía o null.
 """
 
+PROMPT_RESCATE_WEB_TCP = """
+Eres un investigador jurídico del Tribunal Constitucional Plurinacional de Bolivia.
+Usa búsqueda web para ubicar la sentencia en fuentes públicas bolivianas (juristeca.com, tcpbolivia.bo).
+NO transcribas páginas completas. Elabora síntesis jurídica original.
+
+Responde ÚNICAMENTE con JSON válido (sin markdown):
+{
+  "numero_sentencia": "",
+  "tipo_resolucion": "scp|sc|as|ac|dcp|otro",
+  "materia": "laboral|constitucional|...",
+  "magistrado_relator": "",
+  "sala": "",
+  "accion_origen": "",
+  "fecha_resolucion": "YYYY-MM-DD o null",
+  "palabras_clave": "palabra1, palabra2",
+  "ratio_decidendi": "regla jurídica central",
+  "resumen_ia": "resumen práctico para el abogado",
+  "texto_completo": "síntesis estructurada en prosa",
+  "url_fuente": "URL de la fuente consultada"
+}
+"""
 
 # ── Generadores IA ─────────────────────────────────────────────
 

@@ -1,20 +1,66 @@
 import io
 import json
 from datetime import datetime
-from xhtml2pdf import pisa
-from django.http import JsonResponse
-from decimal import Decimal
-from . import liquidacion_asistencia_services as asistencia_services
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
-from django.http import FileResponse, HttpResponse
+from django.db.models import Count, Q
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import get_template
+from django.utils import timezone
+from datetime import date
+from django.template.loader import render_to_string
 
-from .forms import (CasoForm, ClienteForm, ExpedienteForm, DocumentoForm, MovimientoForm, EventoForm, TareaForm, EvidenciaForm, PlantillaContratoForm, GenerarContratoForm)
-from .models import Cliente, Expediente, Documento, Movimiento, Evento, Tarea, EvidenciaTarea, PlantillaContrato, Contrato, PlantillaMemorial, Memorial, PrecedenteJurisprudencial
+from .models import Expediente
+from .liquidacion_asistencia_services import (
+    DISTRITOS_JUDICIALES,
+    es_expediente_familia_liquidacion,
+    computar_liquidacion_completa,
+    parsear_tramos_desde_post,
+    extraer_datos_liquidacion_ia,
+    generar_pdf_liquidacion_asistencia,
+)
+from decimal import Decimal, InvalidOperation
+
+# ── Importar servicios — NUNCA duplicar lógica aquí ──────────
+from .services import (
+    # Generadores IA
+    generar_contrato_con_ia,
+    generar_memorial_con_ia,
+    sugerir_estrategia_jurisprudencial,
+    # Scraper TCP
+    extraer_sentencia_tcp,
+    guardar_precedente,
+    buscar_precedentes_locales,
+    precedentes_a_contexto,
+    construir_url_portal_tcp_oficial,
+    # PDF
+    generar_pdf_documento,
+    generar_pdf_reporte,
+)
+
+# ── Modelos ───────────────────────────────────────────────────
+from .models import (
+    Cliente, Expediente, Documento, Movimiento,
+    Evento, Tarea, EvidenciaTarea,
+    PlantillaContrato, Contrato,
+    PlantillaMemorial, Memorial,
+    PrecedenteJurisprudencial,
+)
+
+# ── Formularios ───────────────────────────────────────────────
+from .forms import (
+    CasoForm, ClienteForm, ExpedienteForm,
+    DocumentoForm, MovimientoForm, EventoForm,
+    TareaForm, EvidenciaForm,
+    PlantillaContratoForm, GenerarContratoForm,
+)
+
+# ════════════════════════════════════════════════════════════════
+# IMPORTANTE: No definir GEMINI_MODEL ni prompts aquí.
+# Todo está centralizado en services.py.
+# ════════════════════════════════════════════════════════════════
 
 @login_required
 def dashboard(request):
@@ -262,30 +308,47 @@ def restaurar_caso(request, pk):
     messages.success(request, 'Expediente restaurado exitosamente.')
     return redirect('papelera_casos')
 
-
-# ── Reporte PDF general ───────────────────────────────────────
+# ── Exportar reporte general PDF ──────────────────────────────
 @login_required
 def exportar_pdf(request):
-    casos    = Expediente.objects.filter(activo=True)
-    template = get_template('control_legal/reporte_pdf.html')
-    html     = template.render({'casos': casos, 'fecha': datetime.now(), 'request': request})
-    result   = io.BytesIO()
-    pisa.CreatePDF(io.BytesIO(html.encode('UTF-8')), dest=result, encoding='UTF-8')
-    result.seek(0)
-    return FileResponse(result, as_attachment=True, filename='Reporte_LexNova.pdf')
+    from .models import Expediente
+    casos = Expediente.objects.filter(activo=True).select_related('cliente')
 
+    # Convertir queryset a lista de dicts para que xhtml2pdf no tenga
+    # problemas con objetos ORM dentro del template de PDF
+    casos_lista = [
+        {
+            'nurej': c.nurej or c.numero_expediente or '—',
+            'cliente': c.cliente.nombre_completo,
+            'materia': c.materia,
+            'activo': c.activo,
+        }
+        for c in casos
+    ]
 
-# ── Reporte PDF de un expediente ──────────────────────────────
-@login_required
+    html = render_to_string('control_legal/reporte_pdf.html', {
+        'casos': casos_lista,
+        'fecha': timezone.now(),
+        'usuario_nombre': request.user.get_full_name() or request.user.username,
+    })
+
+    buf = generar_pdf_reporte(html)
+    response = HttpResponse(buf, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="reporte_expedientes.pdf"'
+    return response
+
+# Si quieres descarga PDF directo (recomendado):
+@login_required  
 def reporte_un_caso(request, pk):
-    caso     = get_object_or_404(Expediente, pk=pk)
-    template = get_template('control_legal/reporte_individual.html')
-    html     = template.render({'caso': caso, 'fecha': datetime.now(), 'request': request})
-    result   = io.BytesIO()
-    pisa.pisaDocument(io.BytesIO(html.encode('UTF-8')), result, encoding='UTF-8')
-    result.seek(0)
-    return FileResponse(result, as_attachment=False, filename=f'Expediente_{caso.nurej}.pdf')
-
+    expediente = get_object_or_404(Expediente, pk=pk)
+    html = render_to_string('control_legal/reporte_individual.html', {
+        'caso': expediente,
+        'fecha': timezone.now(),
+    })
+    buf = generar_pdf_reporte(html)
+    response = HttpResponse(buf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="caso_{expediente.pk}.pdf"'
+    return response
 
 # ── Login ─────────────────────────────────────────────────────
 def login_view(request):
@@ -492,61 +555,19 @@ def ver_contrato(request, pk):
     contrato = get_object_or_404(Contrato, pk=pk)
     return render(request, 'control_legal/ver_contrato.html', {'contrato': contrato})
 
-
-# ── Contratos: exportar PDF ───────────────────────────────────
+# ── Exportar contrato PDF ─────────────────────────────────────
 @login_required
 def exportar_contrato_pdf(request, pk):
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import cm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
-
-    contrato     = get_object_or_404(Contrato, pk=pk)
-    buf          = io.BytesIO()
-    doc          = SimpleDocTemplate(buf, pagesize=letter,
-                                     topMargin=3*cm, bottomMargin=2.5*cm,
-                                     leftMargin=3*cm, rightMargin=3*cm)
-    styles       = getSampleStyleSheet()
-    titulo_style = ParagraphStyle('titulo', parent=styles['Normal'],
-                                  fontSize=13, fontName='Helvetica-Bold',
-                                  alignment=TA_CENTER, spaceAfter=20)
-    cuerpo_style = ParagraphStyle('cuerpo', parent=styles['Normal'],
-                                  fontSize=11, leading=18,
-                                  alignment=TA_JUSTIFY, spaceAfter=12)
-    firma_style  = ParagraphStyle('firma', parent=styles['Normal'],
-                                  fontSize=10, spaceBefore=40)
-    elements = []
-
-    elements.append(Paragraph("LexNova Bolivia", ParagraphStyle(
-        'header', parent=styles['Normal'], fontSize=10,
-        fontName='Helvetica', alignment=TA_CENTER)))
-    elements.append(Spacer(1, 0.3*cm))
-    elements.append(Paragraph(contrato.titulo.upper(), titulo_style))
-    elements.append(Spacer(1, 0.5*cm))
-
-    for parrafo in contrato.contenido_final.split('\n'):
-        if parrafo.strip():
-            elements.append(Paragraph(parrafo.strip(), cuerpo_style))
-        else:
-            elements.append(Spacer(1, 0.3*cm))
-
-    elements.append(Spacer(1, 2*cm))
-    elements.append(Paragraph(
-        f"________________________________&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-        f"________________________________", firma_style))
-    elements.append(Paragraph(
-        f"{contrato.cliente.nombre_completo}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-        f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-        f"{contrato.generado_por.get_full_name() or 'Abogado'}",
-        ParagraphStyle('firma_nombre', parent=styles['Normal'], fontSize=9)))
-
-    doc.build(elements)
-    buf.seek(0)
+    contrato = get_object_or_404(Contrato, pk=pk)
+    buf      = generar_pdf_documento(
+        titulo      = contrato.titulo,
+        contenido   = contrato.contenido_final,
+        firma_izq   = contrato.cliente.nombre_completo,
+        firma_der   = contrato.generado_por.get_full_name() or 'Abogado',
+    )
     nombre = f"Contrato_{contrato.cliente.nombre_completo.replace(' ', '_')}.pdf"
     return HttpResponse(buf, content_type='application/pdf',
                         headers={'Content-Disposition': f'inline; filename="{nombre}"'})
-
 
 # ── Plantillas: lista ─────────────────────────────────────────
 @login_required
@@ -581,98 +602,38 @@ def editar_plantilla(request, pk):
         'form': form, 'editando': True, 'plantilla': plantilla,
     })
 
-import google.generativeai as genai
-from django.conf import settings
-
-SYSTEM_PROMPT_CONTRATOS = """
-Actúa como un Abogado Senior y Asesor Legal Corporativo en Bolivia, con más de 20 años de experiencia en Derecho Civil, Comercial y Tecnológico. Tu objetivo es redactar contratos jurídicamente inexpugnables, precisos, con visión preventiva de litigios y estrictamente adaptados a la normativa del Estado Plurinacional de Bolivia.
-
-SISTEMA HÍBRIDO (AUTOMATIZACIÓN + EDICIÓN MANUAL)
-Tu redacción debe estar diseñada para ser un documento "llave en mano", pero con espacios de edición manual a prueba de errores. Para todo dato faltante, variable, fecha o monto, utiliza CORCHETES Y MAYÚSCULAS (ej. [NOMBRE COMPLETO DEL COMPRADOR], [NÚMERO DE C.I. Y EXPEDICIÓN], [MONTO EN NÚMEROS] ([MONTO EN LETRAS] 00/100 BOLIVIANOS)). Nunca asumas ni inventes datos de las partes.
-
-BASE DE CONOCIMIENTO Y MARCO NORMATIVO
-- Derecho Civil (D.L. No 12760): contratos de transferencia, arrendamiento, anticresis, mutuo y garantías. Aplicación estricta de los 4 requisitos de validez del Art. 452.
-- Derecho Comercial (Código de Comercio) y Corporativo.
-- Contratos Tecnológicos: SaaS, IaaS, PaaS, desarrollo de software y licenciamiento con cláusulas de SLA, propiedad intelectual (SENAPI), confidencialidad (NDA), privacidad de datos y limitación de responsabilidad técnica.
-
-INSTRUCCIONES DE ESTILO BOLIVIANO
-- Usa terminología notarial boliviana: "mayores de edad y hábiles por derecho", "sin que medie dolo, presión, fraude o vicio alguno en el consentimiento", "a su entera satisfacción".
-- En transferencias incluye: "alodial y libre de todo gravamen" y cláusula de "evicción y saneamiento conforme a ley".
-- Enumera cláusulas con ordinales en mayúsculas: PRIMERA.- (DE LAS PARTES Y SU DERECHO PROPIETARIO).
-- Incluye siempre: Resolución de Pleno Derecho (Art. 569 C.C.), cláusulas penales por mora y jurisdicción competente.
-- Contratos civiles de baja cuantía: vía ordinaria. Contratos comerciales/tecnológicos: arbitraje institucional (Ley 708), CNC o CAINCO.
-- Si requiere Derechos Reales: formato MINUTA. Si es privado: cierra con "al solo reconocimiento de firmas y rúbricas ante autoridad competente, surtirá los efectos de instrumento público".
-
-ESTRUCTURA ESTÁNDAR
-1. Encabezado con identificación plena de partes.
-2. PRIMERA.- (ANTECEDENTES / NATURALEZA)
-3. SEGUNDA.- (OBJETO DEL CONTRATO)
-4. Cláusulas operativas: Precio, Pago, Plazos, Obligaciones.
-5. Cláusulas de salvaguarda: Prohibiciones, Confidencialidad.
-6. Cláusula de Incumplimiento, Penalidades y Resolución.
-7. Cláusula de Jurisdicción y Competencia.
-8. Cláusula de Aceptación y Conformidad con espacio para firmas.
-
-Si el usuario omite detalles vitales, usa estándares lógicos entre corchetes para revisión.
-Genera el contrato COMPLETO, listo para copiar en Word, rellenar y firmar.
-Responde SOLO con el texto del contrato, sin explicaciones adicionales ni markdown.
-"""
-
-
+# ── Generador de contratos con IA ────────────────────────────
 @login_required
 def generar_contrato_ia(request):
     contrato_generado = None
-    error = None
+    error             = None
 
     if request.method == 'POST':
-        tipo        = request.POST.get('tipo_contrato', '')
-        partes      = request.POST.get('partes', '')
-        objeto      = request.POST.get('objeto', '')
-        precio      = request.POST.get('precio', '')
-        plazo       = request.POST.get('plazo', '')
-        condiciones = request.POST.get('condiciones', '')
+        contrato_generado, error = generar_contrato_con_ia(
+            tipo        = request.POST.get('tipo_contrato', ''),
+            partes      = request.POST.get('partes', ''),
+            objeto      = request.POST.get('objeto', ''),
+            precio      = request.POST.get('precio', ''),
+            plazo       = request.POST.get('plazo', ''),
+            condiciones = request.POST.get('condiciones', ''),
+        )
 
-        prompt_completo = f"""{SYSTEM_PROMPT_CONTRATOS}
+        if contrato_generado and request.POST.get('guardar'):
+            cliente = Cliente.objects.filter(pk=request.POST.get('cliente_id')).first()
+            if cliente:
+                Contrato.objects.create(
+                    titulo          = f"{request.POST.get('tipo_contrato')} — {cliente.nombre_completo}",
+                    cliente         = cliente,
+                    contenido_final = contrato_generado,
+                    generado_por    = request.user,
+                    ciudad          = 'La Paz',
+                )
+                messages.success(request, 'Contrato guardado correctamente.')
+                return redirect('lista_contratos')
 
-[DATOS DEL CONTRATO A GENERAR]
-Tipo de Contrato: {tipo}
-Identificación de las Partes: {partes}
-Objeto y Detalles Específicos: {objeto}
-Precio / Contraprestación: {precio}
-Plazo de vigencia: {plazo}
-Condiciones especiales adicionales: {condiciones}
-
-Redacta el contrato completo según las instrucciones anteriores.
-"""
-
-        try:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            modelo   = genai.GenerativeModel('gemini-2.5-flash')
-            response = modelo.generate_content(prompt_completo)
-            contrato_generado = response.text
-
-            # Guardar si se solicitó
-            if request.POST.get('guardar') and contrato_generado:
-                cliente_id = request.POST.get('cliente_id')
-                cliente    = Cliente.objects.filter(pk=cliente_id).first()
-                if cliente:
-                    Contrato.objects.create(
-                        titulo          = f"{tipo} — {cliente.nombre_completo}",
-                        cliente         = cliente,
-                        contenido_final = contrato_generado,
-                        generado_por    = request.user,
-                        ciudad          = "La Paz",
-                    )
-                    messages.success(request, 'Contrato guardado correctamente.')
-                    return redirect('lista_contratos')
-
-        except Exception as e:
-            error = f"Error al conectar con Gemini: {str(e)}"
-
-    clientes = Cliente.objects.filter(activo=True).order_by('nombre_completo')
     return render(request, 'control_legal/generar_contrato_ia.html', {
         'contrato_generado': contrato_generado,
-        'clientes':          clientes,
+        'clientes':          Cliente.objects.filter(activo=True).order_by('nombre_completo'),
         'error':             error,
         'post':              request.POST,
     })
@@ -827,27 +788,6 @@ def portal_logout(request):
     request.session.flush()
     return redirect('portal_login')
 
-SYSTEM_PROMPT_MEMORIALES = """
-Actúa como un Abogado Litigante Senior en Bolivia, especializado en redacción de escritos judiciales ante el Órgano Judicial del Estado Plurinacional de Bolivia.
-
-Tu tarea es redactar memoriales judiciales completos, formalmente correctos y adaptados al sistema procesal boliviano.
-
-REGLAS DE REDACCIÓN
-- Usa el encabezado formal: "SEÑOR JUEZ [materia] DE PARTIDO / SEÑOR JUEZ DE INSTRUCCIÓN EN LO [materia]" según corresponda.
-- Identifica al abogado con su nombre y matrícula: "bajo patrocinio del Abogado [nombre], con Matrícula del Colegio de Abogados N° [MATRÍCULA]".
-- Usa fórmulas procesales bolivianas: "A Ud. con el debido respeto me dirijo exponiendo", "POR TANTO", "A USTED SEÑOR JUEZ pido se sirva...".
-- Fundamenta cada petición con el artículo legal correspondiente.
-- Estructura con secciones en mayúsculas: ANTECEDENTES, FUNDAMENTOS DE DERECHO, PETITORIO.
-- El PETITORIO debe ser claro, numerado y específico.
-- Para datos faltantes usa CORCHETES: [MATRÍCULA DEL ABOGADO], [NÚMERO DE EXPEDIENTE], [FECHA DE AUDIENCIA].
-- Cierra con: "Es justicia que espero merecer. [Ciudad], [fecha]."
-
-ESTILO
-- Formal, preciso, sin ambigüedades.
-- Párrafos cortos y numerados donde corresponda.
-- Responde SOLO con el texto del memorial, sin explicaciones ni markdown.
-"""
-
 
 @login_required
 def lista_memoriales(request):
@@ -856,146 +796,154 @@ def lista_memoriales(request):
     ).order_by('-fecha_generado')
     return render(request, 'control_legal/lista_memoriales.html', {'memoriales': memoriales})
 
-
+# ── Generador de memoriales con IA ───────────────────────────
 @login_required
 def generar_memorial(request):
-    from django.utils import timezone
-
-    # Cargar plantillas agrupadas por categoría
-    plantillas = PlantillaMemorial.objects.filter(activa=True).order_by('categoria', 'nombre')
-    clientes   = Cliente.objects.filter(activo=True).order_by('nombre_completo')
+    plantillas  = PlantillaMemorial.objects.filter(activa=True).order_by('categoria', 'nombre')
+    clientes    = Cliente.objects.filter(activo=True).order_by('nombre_completo')
     expedientes = Expediente.objects.filter(activo=True).select_related('cliente').order_by('-id')
 
     memorial_generado = None
-    error             = None
     plantilla_sel     = None
+    error             = None
 
     if request.method == 'POST':
-        plantilla_id  = request.POST.get('plantilla_id')
-        cliente_id    = request.POST.get('cliente_id')
-        expediente_id = request.POST.get('expediente_id')
-        hechos        = request.POST.get('hechos', '')
-        peticion      = request.POST.get('peticion', '')
-        datos_extra   = request.POST.get('datos_extra', '')
-
-        # Obtener objetos relacionados
-        plantilla_sel = PlantillaMemorial.objects.filter(pk=plantilla_id).first()
-        cliente       = Cliente.objects.filter(pk=cliente_id).first()
-        expediente    = Expediente.objects.filter(pk=expediente_id).first() if expediente_id else None
+        plantilla_sel = PlantillaMemorial.objects.filter(
+            pk=request.POST.get('plantilla_id')).first()
+        cliente = Cliente.objects.filter(pk=request.POST.get('cliente_id')).first()
+        expediente = Expediente.objects.filter(
+            pk=request.POST.get('expediente_id')).first() if request.POST.get('expediente_id') else None
 
         if not plantilla_sel or not cliente:
             error = 'Debes seleccionar una plantilla y un cliente.'
         else:
-            # Construir el prompt con contexto real
-            contexto_variables = f"""
-Cliente: {cliente.nombre_completo}
-CI del cliente: {cliente.ci}
-Dirección: {cliente.direccion or '[DIRECCIÓN]'}
-Abogado: {request.user.get_full_name() or '[NOMBRE DEL ABOGADO]'}
-Ciudad: La Paz
-Fecha: {timezone.now().strftime('%d de %B de %Y')}
-NUREJ/Expediente: {expediente.nurej if expediente else '[NUREJ]'}
-Juzgado: {expediente.juzgado if expediente else '[JUZGADO]'}
-Materia: {expediente.materia if expediente else '[MATERIA]'}
-"""
-            prompt = f"""{SYSTEM_PROMPT_MEMORIALES}
+            memorial_generado, error = generar_memorial_con_ia(
+                plantilla      = plantilla_sel,
+                cliente        = cliente,
+                expediente     = expediente,
+                hechos         = request.POST.get('hechos', ''),
+                peticion       = request.POST.get('peticion', ''),
+                datos_extra    = request.POST.get('datos_extra', ''),
+                abogado_nombre = request.user.get_full_name() or request.user.username,
+                fecha_hoy      = timezone.now().strftime('%d de %B de %Y'),
+            )
 
-PLANTILLA A USAR — {plantilla_sel.nombre}:
-{plantilla_sel.estructura}
-
-NORMAS APLICABLES:
-{plantilla_sel.normas_aplicables or 'Aplica las normas que correspondan según la materia.'}
-
-DATOS DEL CASO:
-{contexto_variables}
-
-HECHOS DEL CASO (proporcionados por el abogado):
-{hechos}
-
-PETICIÓN ESPECÍFICA:
-{peticion}
-
-DATOS ADICIONALES:
-{datos_extra or 'Ninguno.'}
-
-Redacta el memorial completo siguiendo la plantilla y adaptándola al caso concreto.
-"""
-            try:
-                genai.configure(api_key=settings.GEMINI_API_KEY)
-                modelo   = genai.GenerativeModel('gemini-2.5-flash')
-                response = modelo.generate_content(prompt)
-                memorial_generado = response.text
-
-                # Guardar si se solicita
-                if request.POST.get('guardar') and memorial_generado and cliente:
-                    Memorial.objects.create(
-                        plantilla       = plantilla_sel,
-                        expediente      = expediente,
-                        cliente         = cliente,
-                        generado_por    = request.user,
-                        titulo          = f"{plantilla_sel.nombre} — {cliente.nombre_completo}",
-                        contenido_final = memorial_generado,
-                    )
-                    messages.success(request, 'Memorial guardado correctamente.')
-                    return redirect('lista_memoriales')
-
-            except Exception as e:
-                error = f"Error al conectar con Gemini: {str(e)}"
+            if memorial_generado and request.POST.get('guardar') and cliente:
+                Memorial.objects.create(
+                    plantilla       = plantilla_sel,
+                    expediente      = expediente,
+                    cliente         = cliente,
+                    generado_por    = request.user,
+                    titulo          = f"{plantilla_sel.nombre} — {cliente.nombre_completo}",
+                    contenido_final = memorial_generado,
+                )
+                messages.success(request, 'Memorial guardado correctamente.')
+                return redirect('lista_memoriales')
 
     return render(request, 'control_legal/generar_memorial.html', {
-        'plantillas':      plantillas,
-        'clientes':        clientes,
-        'expedientes':     expedientes,
+        'plantillas':        plantillas,
+        'clientes':          clientes,
+        'expedientes':       expedientes,
         'memorial_generado': memorial_generado,
-        'plantilla_sel':   plantilla_sel,
-        'error':           error,
-        'post':            request.POST,
+        'plantilla_sel':     plantilla_sel,
+        'error':             error,
+        'post':              request.POST,
     })
-
 
 @login_required
 def ver_memorial(request, pk):
     memorial = get_object_or_404(Memorial, pk=pk)
     return render(request, 'control_legal/ver_memorial.html', {'memorial': memorial})
 
-
+# ── Exportar memorial PDF ─────────────────────────────────────
 @login_required
 def exportar_memorial_pdf(request, pk):
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import cm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
-
-    memorial     = get_object_or_404(Memorial, pk=pk)
-    buf          = io.BytesIO()
-    doc          = SimpleDocTemplate(buf, pagesize=letter,
-                                     topMargin=3*cm, bottomMargin=2.5*cm,
-                                     leftMargin=3*cm, rightMargin=3*cm)
-    styles       = getSampleStyleSheet()
-    titulo_style = ParagraphStyle('titulo', parent=styles['Normal'],
-                                  fontSize=12, fontName='Helvetica-Bold',
-                                  alignment=TA_CENTER, spaceAfter=16)
-    cuerpo_style = ParagraphStyle('cuerpo', parent=styles['Normal'],
-                                  fontSize=11, leading=18,
-                                  alignment=TA_JUSTIFY, spaceAfter=10)
-    elements     = []
-
-    elements.append(Paragraph(memorial.titulo.upper(), titulo_style))
-    elements.append(Spacer(1, 0.5*cm))
-
-    for parrafo in memorial.contenido_final.split('\n'):
-        if parrafo.strip():
-            elements.append(Paragraph(parrafo.strip(), cuerpo_style))
-        else:
-            elements.append(Spacer(1, 0.25*cm))
-
-    doc.build(elements)
-    buf.seek(0)
-    nombre = f"Memorial_{memorial.cliente.nombre_completo.replace(' ','_')}.pdf"
+    memorial = get_object_or_404(Memorial, pk=pk)
+    buf      = generar_pdf_documento(
+        titulo    = memorial.titulo,
+        contenido = memorial.contenido_final,
+    )
+    nombre = f"Memorial_{memorial.cliente.nombre_completo.replace(' ', '_')}.pdf"
     return HttpResponse(buf, content_type='application/pdf',
-                        headers={'Content-Disposition': f'inline; filename="{nombre}"'}) 
+                        headers={'Content-Disposition': f'inline; filename="{nombre}"'})
 
+# ── Jurisprudencia: asistente de estrategia ───────────────────
+@login_required
+def jurisprudencia_asistente(request):
+    from .models import PrecedenteJurisprudencial
+    from .services import (
+        sugerir_estrategia_jurisprudencial,
+        extraer_sentencia_tcp,
+        guardar_precedente,
+        buscar_precedentes_locales,
+        precedentes_a_contexto,
+    )
+
+    estrategia = None
+    precedente_extraido = None
+    extraido_fuente_alternativa = False
+    error = None
+    post = {}
+
+    materias = PrecedenteJurisprudencial.MATERIAS
+    buscar = request.GET.get('buscar', '')
+    materia_filtro = request.GET.get('materia', '')
+
+    precedentes_banco = buscar_precedentes_locales(
+        termino=buscar, materia=materia_filtro
+    )
+
+    if request.method == 'POST':
+        post = request.POST
+        opcion = post.get('opcion', '')
+
+        if opcion == 'estrategia':
+            hechos = post.get('hechos_caso', '').strip()
+            if not hechos:
+                error = 'Debes describir los hechos del caso.'
+            else:
+                materia = post.get('materia', '')
+                peticion = post.get('peticion', '')
+                termino = post.get('termino_precedentes', '')
+
+                precedentes_ctx = ''
+                if termino:
+                    precs = buscar_precedentes_locales(termino=termino, materia=materia)
+                    precedentes_ctx = precedentes_a_contexto(precs)
+
+                estrategia, error = sugerir_estrategia_jurisprudencial(
+                    hechos_caso=hechos,
+                    materia=materia,
+                    peticion=peticion,
+                    precedentes_contexto=precedentes_ctx,
+                )
+
+        elif opcion == 'extraccion_tcp':
+            entrada = post.get('url_tcp', '').strip()
+            if not entrada:
+                error = 'Debes ingresar un número de sentencia o URL.'
+            else:
+                datos, error = extraer_sentencia_tcp(entrada)
+                if datos:
+                    precedente_extraido, _, error = guardar_precedente(
+                        datos, usuario=request.user
+                    )
+                    if precedente_extraido:
+                        extraido_fuente_alternativa = datos.get('fuente_alternativa', False)
+                        error = None  # guardado exitoso
+
+    context = {
+        'estrategia': estrategia,
+        'precedente_extraido': precedente_extraido,
+        'extraido_fuente_alternativa': extraido_fuente_alternativa,
+        'error': error,
+        'post': post,
+        'materias': materias,
+        'precedentes_banco': precedentes_banco,
+        'buscar': buscar,
+        'materia_filtro': materia_filtro,
+    }
+    return render(request, 'control_legal/jurisprudencia_asistente.html', context)
 # =====================================================================
 # 1. CALCULADORA INDEPENDIENTE (Procesamiento Numérico Real)
 # =====================================================================
@@ -1076,18 +1024,108 @@ def calculadora_asistencia(request, caso_id=None):
 
             context['resultado'] = resultado_calculo
             context['aplicar_duodecimas'] = aplicar_duodecimas
+            context['valores_iniciales'] = valores_iniciales
 
         except (ValueError, TypeError) as e:
             context['error'] = "Por favor, verifica que los montos y los rangos de fechas ingresados sean correctos."
 
     return render(request, 'control_legal/calculadora_asistencia.html', context)
 
-
 # =====================================================================
 # 2. CALCULADORA INTEGRADA AL EXPEDIENTE
 # =====================================================================
+@login_required
+def calculadora_asistencia(request):
+    return _calculadora_asistencia_core(request, expediente=None)
+
+
+@login_required
 def calculadora_asistencia_expediente(request, pk):
-    return calculadora_asistencia(request, caso_id=pk)
+    expediente = get_object_or_404(Expediente, pk=pk)
+    return _calculadora_asistencia_core(request, expediente=expediente)
+
+
+def _calculadora_asistencia_core(request, expediente):
+    hoy = date.today().strftime('%Y-%m-%d')
+    resultado = None
+    error = None
+    aplicar_duodecimas = False
+    post = {}
+
+    valores_iniciales = {}
+    if expediente:
+        valores_iniciales = {
+            'nurej_ianus': expediente.nurej or '',
+            'juzgado': expediente.juzgado or '',
+            'partes': f'{expediente.cliente.nombre_completo} / (demandado)',
+        }
+    # Valores que el template necesita directamente (no como dict anidado)
+    distrito_actual = ''
+    juzgado_actual = valores_iniciales.get('juzgado', '')
+    nurej_actual = valores_iniciales.get('nurej_ianus', '')
+    partes_actual = valores_iniciales.get('partes', '')
+    fecha_inicio_actual = ''
+    monto_actual = ''
+
+    if request.method == 'POST':
+        aplicar_duodecimas = bool(request.POST.get('aplicar_duodecimas'))
+        tramos = parsear_tramos_desde_post(request.POST)
+        accion = request.POST.get('accion', 'calcular')
+
+        # Recuperar valores del POST para repintar el formulario
+        distrito_actual = request.POST.get('distrito_judicial', '')
+        juzgado_actual = request.POST.get('juzgado', '')
+        nurej_actual = request.POST.get('nurej_ianus', '')
+        partes_actual = request.POST.get('partes', '')
+
+        if not tramos:
+            error = 'Debes añadir al menos un tramo con fechas y monto válidos.'
+        else:
+            resultado = computar_liquidacion_completa(
+                tramos, aplicar_duodecimas=aplicar_duodecimas
+            )
+            datos_planilla = {
+                'distrito_judicial': post.get('distrito_judicial', ''),
+                'juzgado': post.get('juzgado', ''),
+                'nurej_ianus': post.get('nurej_ianus', ''),
+                'partes': post.get('partes', ''),
+                'filas': resultado['filas'],
+                'total_liquidacion': resultado['total_liquidacion'],
+                'aplicar_duodecimas': aplicar_duodecimas,
+            }
+
+            if accion == 'reporte_pdf':
+                buf = generar_pdf_liquidacion_asistencia(datos_planilla)
+                response = HttpResponse(buf, content_type='application/pdf')
+                response['Content-Disposition'] = (
+                    'attachment; filename="liquidacion_asistencia.pdf"'
+                )
+                return response
+
+    context = {
+        'hoy': hoy,
+        'distritos': DISTRITOS_JUDICIALES,
+        'resultado': resultado,
+        'error': error,
+        'aplicar_duodecimas': aplicar_duodecimas,
+        'expediente': expediente,
+        # Variables planas — el template las usa directamente
+        'distrito_actual': distrito_actual,
+        'juzgado_actual': juzgado_actual,
+        'nurej_actual': nurej_actual,
+        'partes_actual': partes_actual,
+    }
+    return render(request, 'control_legal/calculadora_asistencia.html', context)
+
+
+@login_required
+def api_extraer_ia_liquidacion(request, pk):
+    """Endpoint AJAX: extrae datos del expediente con IA."""
+    expediente = get_object_or_404(Expediente, pk=pk)
+    datos, error = extraer_datos_liquidacion_ia(expediente)
+    if error:
+        return JsonResponse({'ok': False, 'error': error})
+    return JsonResponse({'ok': True, 'datos': datos})    
 
 
 # =====================================================================
@@ -1150,10 +1188,3 @@ def exportar_liquidacion_pdf(request):
     response = HttpResponse(buffer_pdf.read(), content_type='application/pdf')
     response['Content-Disposition'] = 'inline; filename="Planilla_Liquidacion_Ley603.pdf"'
     return response
-
-@login_required
-def jurisprudencia_asistente(request):
-    """Carga correctamente el módulo de jurisprudencia con su nombre real"""
-    return render(request, 'control_legal/jurisprudencia_asistente.html', {
-        'modulo': 'Jurisprudencia'  # <--- Cambia el texto aquí
-    })

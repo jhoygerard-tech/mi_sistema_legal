@@ -12,7 +12,6 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 from dateutil.relativedelta import relativedelta
-import google.generativeai as genai
 from django.conf import settings
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
@@ -22,6 +21,12 @@ from reportlab.lib.units import cm
 from reportlab.platypus import (
     Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
+
+# ── Importar desde services.py — única fuente de verdad ──────
+from .services import _generar_texto as _generar_texto_gemini
+
+# El resto del archivo permanece igual desde DISTRITOS_JUDICIALES en adelante.
+# Solo elimina la función _generar_texto_gemini que estaba definida aquí.
 
 GEMINI_MODEL = 'gemini-2.5-flash'
 

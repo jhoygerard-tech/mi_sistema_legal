@@ -70,12 +70,12 @@
                         <div class="d-flex align-items-center gap-2">
                             <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white"
                                  style="width:32px;height:32px;font-size:.8rem;flex-shrink:0;">
-                                {{ caso.nombre_cliente|slice:":1"|upper }}
+                                {{ caso.cliente.nombre_completo|slice:":1"|upper }}
                             </div>
                             {% if caso.cliente %}
-                            <a href="{% url 'detalle_cliente' caso.cliente.pk %}" class="fw-medium text-decoration-none">{{ caso.nombre_cliente }}</a>
+                            <a href="{% url 'detalle_cliente' caso.cliente.id %}" class="fw-medium text-decoration-none">{{ caso.cliente.nombre_completo }}</a>
                             {% else %}
-                            <span class="fw-medium">{{ caso.nombre_cliente }}</span>
+                            <span class="fw-medium">{{ caso.cliente.nombre_completo }}</span>
                             {% endif %}
                         </div>
                     </td>

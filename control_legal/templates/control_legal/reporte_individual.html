@@ -1,15 +1,3 @@
-{% extends "base.html" %}
-{% block titulo %}Listado de Expedientes{% endblock %}
-{% block topbar_titulo %}Expedientes{% endblock %}
-{% block contenido %}
-
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <!-- Meta obligatorio para evitar el error de la imagen 5d32308b-cb6a-47b6-813f-4bfff91a1509 -->
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Reporte Caso {{ caso.nurej }}</title>
     <style>
         @page { size: letter; margin: 2cm; }
         body { font-family: Helvetica, Arial, sans-serif; color: #333; }
@@ -19,8 +7,7 @@
         .dato-fila { margin: 10px 0; border-bottom: 0.5pt solid #eee; padding-bottom: 5px; }
         .label { font-weight: bold; width: 150px; display: inline-block; }
     </style>
-</head>
-<body>
+
     <div class="header">
         <div class="titulo">CONSULTORIO JURÍDICO POPULAR</div>
         <div>FICHA DE SEGUIMIENTO DE PROCESO</div>
