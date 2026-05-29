@@ -1,15 +1,34 @@
 {% extends "base.html" %}
-{% block titulo %}Listado de Expedientes{% endblock %}
+{% block titulo %}Expedientes{% endblock %}
 {% block topbar_titulo %}Expedientes{% endblock %}
+
+{% block estilos_extra %}
+<style>
+  .estado-badge { font-size:.75rem; padding:4px 10px; border-radius:20px; font-weight:600; letter-spacing:.3px; }
+  .estado-activo    { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+  .estado-concluido { background:#e0e7ff; color:#3730a3; border:1px solid #a5b4fc; }
+  .estado-archivado { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+  .estado-abandono  { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+  .btn-accion { width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center;
+                border-radius:8px; border:1px solid #e2e6ef; background:#fff; transition:all .15s; font-size:.9rem; }
+  .btn-accion:hover { transform:translateY(-1px); box-shadow:0 3px 8px rgba(0,0,0,.1); }
+  .materia-pill { font-size:.72rem; padding:3px 8px; border-radius:12px; font-weight:600; }
+</style>
+{% endblock %}
 
 {% block contenido %}
 
-<!-- Encabezado -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h5 class="fw-bold mb-0">Procesos registrados</h5>
-    <div class="d-flex gap-2">
+<!-- ── Encabezado ── -->
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+    <div>
+        <h5 class="fw-bold mb-0" style="color:#1a2744;">Expedientes registrados</h5>
+        <p class="text-muted mb-0" style="font-size:.88rem;">
+            Gestiona los procesos judiciales del bufete.
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
         <a href="{% url 'registrar_caso' %}" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg me-1"></i> Nuevo caso
+            <i class="bi bi-folder-plus me-1"></i> Agregar expediente
         </a>
         <a href="{% url 'exportar_pdf' %}" class="btn btn-outline-danger btn-sm">
             <i class="bi bi-file-earmark-pdf me-1"></i> Reporte general
@@ -20,114 +39,299 @@
     </div>
 </div>
 
-<!-- Buscador y ordenamiento -->
+<!-- ── Buscador + filtros ── -->
 <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
-    <div class="card-body py-3">
-        <form method="GET" class="mb-2">
-            <div class="input-group">
-                <input type="text" name="buscar" class="form-control"
-                       placeholder="Buscar por cliente, NUREJ, materia o abogado..."
-                       value="{{ busqueda }}">
-                <button class="btn btn-primary" type="submit">
-                    <i class="bi bi-search"></i> Buscar
-                </button>
-                {% if busqueda %}
-                    <a href="{% url 'listar_casos' %}" class="btn btn-outline-secondary">Limpiar</a>
-                {% endif %}
+    <div class="card-body p-3">
+        <form method="GET" id="form-busqueda">
+            <div class="row g-2 align-items-end">
+
+                <!-- Campo de texto -->
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted" style="font-size:.85rem;"></i>
+                        </span>
+                        <input type="text" name="buscar" id="input-buscar"
+                               value="{{ busqueda }}"
+                               class="form-control border-start-0 ps-0"
+                               placeholder="Cliente, NUREJ, materia o abogado…">
+                        {% if busqueda %}
+                        <a href="{% url 'listar_casos' %}" class="btn btn-outline-secondary" title="Limpiar">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Filtro por estado -->
+                <div class="col-md-3">
+                    <select name="estado" class="form-select" onchange="this.form.submit()" style="font-size:.88rem;">
+                        <option value="">— Todos los estados —</option>
+                        <option value="activo"    {% if estado_filtro == 'activo'    %}selected{% endif %}>Activo</option>
+                        <option value="concluido" {% if estado_filtro == 'concluido' %}selected{% endif %}>Concluido</option>
+                        <option value="archivado" {% if estado_filtro == 'archivado' %}selected{% endif %}>Archivado</option>
+                        <option value="abandono"  {% if estado_filtro == 'abandono'  %}selected{% endif %}>Abandono</option>
+                    </select>
+                </div>
+
+                <!-- Filtro por materia -->
+                <div class="col-md-2">
+                    <select name="materia" class="form-select" onchange="this.form.submit()" style="font-size:.88rem;">
+                        <option value="">— Materia —</option>
+                        <option value="Civil"          {% if materia_filtro == 'Civil'          %}selected{% endif %}>Civil</option>
+                        <option value="Penal"          {% if materia_filtro == 'Penal'          %}selected{% endif %}>Penal</option>
+                        <option value="Familia"        {% if materia_filtro == 'Familia'        %}selected{% endif %}>Familia</option>
+                        <option value="Laboral"        {% if materia_filtro == 'Laboral'        %}selected{% endif %}>Laboral</option>
+                        <option value="Administrativo" {% if materia_filtro == 'Administrativo' %}selected{% endif %}>Administrativo</option>
+                        <option value="Constitucional" {% if materia_filtro == 'Constitucional' %}selected{% endif %}>Constitucional</option>
+                        <option value="Otro"           {% if materia_filtro == 'Otro'           %}selected{% endif %}>Otro</option>
+                    </select>
+                </div>
+
+                <!-- Botón buscar -->
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100" style="font-size:.88rem;">
+                        <i class="bi bi-funnel me-1"></i> Filtrar
+                    </button>
+                </div>
             </div>
         </form>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="text-muted" style="font-size:.8rem;">Ordenar por:</span>
-            <a href="?orden=nombre"  class="btn btn-outline-primary btn-sm">Nombre (A-Z)</a>
-            <a href="?orden=fecha"   class="btn btn-outline-primary btn-sm">Más recientes</a>
-            <a href="?orden=materia" class="btn btn-outline-primary btn-sm">Materia</a>
-            <a href="?orden=id"      class="btn btn-outline-secondary btn-sm">Restablecer</a>
+
+        <!-- Ordenamiento rápido -->
+        <div class="d-flex align-items-center gap-2 flex-wrap mt-2 pt-2 border-top">
+            <span class="text-muted" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.5px;">Ordenar:</span>
+            <a href="?buscar={{ busqueda }}&estado={{ estado_filtro }}&materia={{ materia_filtro }}&orden=nombre"
+               class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.78rem;">A-Z Cliente</a>
+            <a href="?buscar={{ busqueda }}&estado={{ estado_filtro }}&materia={{ materia_filtro }}&orden=fecha"
+               class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.78rem;">Más recientes</a>
+            <a href="?buscar={{ busqueda }}&estado={{ estado_filtro }}&materia={{ materia_filtro }}&orden=materia"
+               class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.78rem;">Materia</a>
+            <a href="?buscar={{ busqueda }}&estado={{ estado_filtro }}&materia={{ materia_filtro }}&orden=id"
+               class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.78rem;">Restablecer</a>
         </div>
     </div>
 </div>
 
-<!-- Tabla de casos -->
-<div class="card border-0 shadow-sm" style="border-radius:12px;">
+<!-- ── Tabla de expedientes ── -->
+<div class="card border-0 shadow-sm" style="border-radius:12px; overflow:hidden;">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0" style="font-size:.875rem;">
-            <thead class="table-light">
+            <thead style="background:#f8f9fc; border-bottom:2px solid #e2e6ef;">
                 <tr>
-                    <th class="ps-4 py-3">NUREJ / Proceso</th>
-                    <th>Cliente</th>
-                    <th>Materia</th>
-                    <th>Estado</th>
-                    <th class="text-center pe-4">Acciones</th>
+                    <th class="ps-4 py-3" style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600; min-width:160px;">
+                        Materia / NUREJ
+                    </th>
+                    <th style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600; min-width:160px;">
+                        Cliente
+                    </th>
+                    <th style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600; min-width:140px;">
+                        Tipo de proceso
+                    </th>
+                    <th style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600; min-width:130px;">
+                        Abogado asignado
+                    </th>
+                    <th style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">
+                        Estado
+                    </th>
+                    <th class="text-center pe-4" style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">
+                        Acciones
+                    </th>
                 </tr>
             </thead>
             <tbody>
                 {% for caso in casos %}
                 <tr>
+
+                    <!-- Materia + NUREJ -->
                     <td class="ps-4">
-                        <span class="d-block fw-bold text-primary">{{ caso.nurej }}</span>
-                        <small class="text-muted">{{ caso.materia }}</small>
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white"
-                                 style="width:32px;height:32px;font-size:.8rem;flex-shrink:0;">
-                                {{ caso.cliente.nombre_completo|slice:":1"|upper }}
-                            </div>
-                            {% if caso.cliente %}
-                            <a href="{% url 'detalle_cliente' caso.cliente.id %}" class="fw-medium text-decoration-none">{{ caso.cliente.nombre_completo }}</a>
+                        {% if caso.materia == 'Civil' %}
+                            <span class="materia-pill" style="background:#dbeafe; color:#1d4ed8;">Civil</span>
+                        {% elif caso.materia == 'Penal' %}
+                            <span class="materia-pill" style="background:#fee2e2; color:#991b1b;">Penal</span>
+                        {% elif caso.materia == 'Familia' %}
+                            <span class="materia-pill" style="background:#fce7f3; color:#9d174d;">Familia</span>
+                        {% elif caso.materia == 'Laboral' %}
+                            <span class="materia-pill" style="background:#dcfce7; color:#166534;">Laboral</span>
+                        {% elif caso.materia == 'Administrativo' %}
+                            <span class="materia-pill" style="background:#ffedd5; color:#9a3412;">Administrativo</span>
+                        {% elif caso.materia == 'Constitucional' %}
+                            <span class="materia-pill" style="background:#ede9fe; color:#5b21b6;">Constitucional</span>
+                        {% else %}
+                            <span class="materia-pill" style="background:#f1f5f9; color:#475569;">{{ caso.materia }}</span>
+                        {% endif %}
+                        <div class="text-muted mt-1" style="font-size:.78rem;">
+                            {% if caso.nurej %}
+                                <i class="bi bi-hash" style="font-size:.7rem;"></i> {{ caso.nurej }}
                             {% else %}
-                            <span class="fw-medium">{{ caso.cliente.nombre_completo }}</span>
+                                <span class="opacity-50">Sin NUREJ</span>
                             {% endif %}
                         </div>
                     </td>
-                    <td>{{ caso.descripcion|default:"Sin descripción"|truncatechars:30 }}</td>
+
+                    <!-- Cliente -->
                     <td>
-                        {% if caso.activo %}
-                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2">
-                                <i class="bi bi-check-circle-fill me-1"></i> Activo
-                            </span>
-                        {% else %}
-                            <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
-                                <i class="bi bi-clock-history me-1"></i> Trámite
-                            </span>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                 style="width:32px; height:32px; background:#e8edf8; color:#2e59a7; font-weight:700; font-size:.85rem;">
+                                {{ caso.cliente.nombre_completo|first|upper }}
+                            </div>
+                            <div>
+                                <a href="{% url 'detalle_cliente' caso.cliente.pk %}"
+                                   class="fw-semibold text-decoration-none"
+                                   style="color:#1a2744; font-size:.88rem;">
+                                    {{ caso.cliente.nombre_completo|truncatechars:22 }}
+                                </a>
+                                <div class="text-muted" style="font-size:.75rem;">{{ caso.cliente.ci }}</div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Tipo de proceso -->
+                    <td>
+                        <span style="font-size:.85rem; color:#374151;">
+                            {{ caso.tipo_proceso|default:'—'|truncatechars:28 }}
+                        </span>
+                        {% if caso.juzgado %}
+                        <div class="text-muted" style="font-size:.75rem;">
+                            <i class="bi bi-building" style="font-size:.7rem;"></i>
+                            {{ caso.juzgado|truncatechars:25 }}
+                        </div>
                         {% endif %}
                     </td>
+
+                    <!-- Abogado asignado -->
+                    <td>
+                        {% if caso.abogado_asignado %}
+                        <div class="d-flex align-items-center gap-1">
+                            <div class="rounded-circle bg-success d-flex align-items-center justify-content-center flex-shrink-0"
+                                 style="width:22px; height:22px;">
+                                <i class="bi bi-person-fill text-white" style="font-size:.65rem;"></i>
+                            </div>
+                            <span style="font-size:.83rem;">
+                                {{ caso.abogado_asignado.get_full_name|default:caso.abogado_asignado.username|truncatechars:18 }}
+                            </span>
+                        </div>
+                        {% else %}
+                        <span class="text-muted" style="font-size:.82rem;">
+                            <i class="bi bi-dash-circle me-1 opacity-50"></i>Sin asignar
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Estado (refleja el campo estado real del formulario) -->
+                    <td>
+                        {% if caso.estado == 'activo' %}
+                            <span class="estado-badge estado-activo">
+                                <i class="bi bi-play-circle-fill me-1"></i>Activo
+                            </span>
+                        {% elif caso.estado == 'concluido' %}
+                            <span class="estado-badge estado-concluido">
+                                <i class="bi bi-check-circle-fill me-1"></i>Concluido
+                            </span>
+                        {% elif caso.estado == 'archivado' %}
+                            <span class="estado-badge estado-archivado">
+                                <i class="bi bi-archive-fill me-1"></i>Archivado
+                            </span>
+                        {% elif caso.estado == 'abandono' %}
+                            <span class="estado-badge estado-abandono">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Abandono
+                            </span>
+                        {% else %}
+                            <span class="estado-badge estado-archivado">{{ caso.get_estado_display }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Acciones -->
                     <td class="text-center pe-4">
-                        <div class="btn-group shadow-sm">
-                            <a href="{% url 'reporte_un_caso' caso.pk %}" class="btn btn-sm btn-white border text-info"  title="Ver PDF">
+                        <div class="d-flex justify-content-center gap-1">
+
+                            <!-- PDF del expediente (reporte individual) -->
+                            <a href="{% url 'reporte_un_caso' caso.pk %}"
+                               class="btn-accion text-danger" title="Generar reporte PDF del expediente"
+                               target="_blank">
                                 <i class="bi bi-file-earmark-pdf"></i>
                             </a>
-                            <a href="{% url 'detalle_caso' caso.pk %}" class="btn btn-sm btn-white border text-secondary" title="Detalle expediente">
+
+                            <!-- Ver detalle del expediente -->
+                            <a href="{% url 'detalle_caso' caso.pk %}"
+                               class="btn-accion text-primary" title="Abrir expediente">
                                 <i class="bi bi-folder2-open"></i>
                             </a>
-                            <a href="{% url 'editar_caso' caso.pk %}"     class="btn btn-sm btn-white border text-warning" title="Editar">
+
+                            <!-- Editar expediente -->
+                            <a href="{% url 'editar_caso' caso.pk %}"
+                               class="btn-accion text-warning" title="Editar expediente">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
-                            <a href="{% url 'eliminar_caso' caso.pk %}"   class="btn btn-sm btn-white border text-danger"  title="Eliminar">
+
+                            <!-- Eliminar (mover a papelera) -->
+                            <a href="{% url 'eliminar_caso' caso.pk %}"
+                               class="btn-accion text-danger" title="Mover a papelera"
+                               onclick="return confirm('¿Mover este expediente a la papelera?')">
                                 <i class="bi bi-trash3"></i>
                             </a>
                         </div>
                     </td>
+
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="text-center text-muted py-5">
+                    <td colspan="6" class="text-center text-muted py-5">
                         <i class="bi bi-folder-x fs-1 d-block mb-2 opacity-25"></i>
-                        No hay casos registrados actualmente.
+                        {% if busqueda or estado_filtro or materia_filtro %}
+                            No se encontraron expedientes con los filtros aplicados.
+                            <br>
+                            <a href="{% url 'listar_casos' %}" class="btn btn-outline-secondary btn-sm mt-2">
+                                <i class="bi bi-x-circle me-1"></i> Limpiar filtros
+                            </a>
+                        {% else %}
+                            No hay expedientes registrados todavía.
+                            <br>
+                            <a href="{% url 'registrar_caso' %}" class="btn btn-primary btn-sm mt-2">
+                                <i class="bi bi-folder-plus me-1"></i> Agregar primer expediente
+                            </a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    <!-- Pie: contador -->
+    {% if casos %}
+    <div class="px-4 py-2 border-top d-flex align-items-center justify-content-between"
+         style="background:#fafbfc; font-size:.82rem; color:#6c757d;">
+        <span>
+            <i class="bi bi-folder2 me-1"></i>
+            {{ casos|length }} expediente{{ casos|length|pluralize }} encontrado{{ casos|length|pluralize }}
+        </span>
+        {% if busqueda or estado_filtro or materia_filtro %}
+        <a href="{% url 'listar_casos' %}" class="text-decoration-none text-muted">
+            <i class="bi bi-x-circle me-1"></i> Limpiar filtros
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 {% endblock %}
 
 {% block scripts_extra %}
 <script>
+    // Preservar búsqueda de texto en los links de ordenamiento
+    document.querySelectorAll('a[href*="orden="]').forEach(function(link) {
+        const buscar = document.getElementById('input-buscar').value;
+        if (buscar) {
+            link.href = link.href + '&buscar=' + encodeURIComponent(buscar);
+        }
+    });
+
+    // Cerrar alertas automáticamente
     setTimeout(function() {
         document.querySelectorAll('.alert').forEach(function(el) {
-            bootstrap.Alert.getOrCreateInstance(el).close();
+            var alert = bootstrap.Alert.getOrCreateInstance(el);
+            if (alert) alert.close();
         });
     }, 3000);
 </script>

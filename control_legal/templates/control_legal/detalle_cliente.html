@@ -1,68 +1,199 @@
 {% extends "base.html" %}
-{% block titulo %}Cliente — {{ cliente.nombre_completo }}{% endblock %}
-{% block topbar_titulo %}Cliente{% endblock %}
+{% block titulo %}{{ cliente.nombre_completo }} — Ficha de cliente{% endblock %}
+{% block topbar_titulo %}Ficha de cliente{% endblock %}
 
 {% block contenido %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h5 class="fw-bold mb-0">{{ cliente.nombre_completo }}</h5>
-        <p class="text-muted mb-0" style="font-size:.9rem;">Detalle del cliente y sus expedientes activos.</p>
+
+<!-- Encabezado con avatar y nombre -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+        <!-- Avatar grande con inicial -->
+        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+             style="width:56px; height:56px; background:#e8edf8; color:#2e59a7; font-weight:700; font-size:1.5rem;">
+            {{ cliente.nombre_completo|first|upper }}
+        </div>
+        <div>
+            <h5 class="fw-bold mb-0" style="color:#1a2744;">{{ cliente.nombre_completo }}</h5>
+            <small class="text-muted">
+                CI {{ cliente.ci }} &nbsp;·&nbsp; Registrado el {{ cliente.fecha_registro|date:'d/m/Y' }}
+            </small>
+        </div>
     </div>
-    <div class="d-flex gap-2">
+
+    <!-- Botones de acción principales -->
+    <div class="d-flex gap-2 flex-wrap">
         <a href="{% url 'listar_clientes' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i> Clientes
         </a>
-        <a href="{% url 'registrar_caso' %}?cliente={{ cliente.id }}" class="btn btn-primary btn-sm">
+        <a href="{% url 'editar_cliente' cliente.pk %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil me-1"></i> Editar datos
+        </a>
+        <a href="{% url 'registrar_caso' %}?cliente={{ cliente.pk }}" class="btn btn-primary btn-sm">
             <i class="bi bi-file-earmark-plus me-1"></i> Nuevo expediente
         </a>
     </div>
 </div>
 
 
-<div class="row g-3 mb-4">
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+<!-- Fila superior: Datos personales + Código de portal -->
+<div class="row g-3 mb-3">
+
+    <!-- Datos personales -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
             <div class="card-body p-4">
-                <h6 class="mb-3">Información</h6>
-                <dl class="row mb-0">
-                    <dt class="col-4 text-muted">Documento</dt>
-                    <dd class="col-8">{{ cliente.ci|default:'-' }}</dd>
-                    <dt class="col-4 text-muted">Teléfono</dt>
-                    <dd class="col-8">{{ cliente.telefono|default:'-' }}</dd>
-                    <dt class="col-4 text-muted">Email</dt>
-                    <dd class="col-8">{{ cliente.email|default:'-' }}</dd>
-                    <dt class="col-4 text-muted">Dirección</dt>
-                    <dd class="col-8">{{ cliente.direccion|default:'-' }}</dd>
-                </dl>
+                <h6 class="fw-bold mb-3 text-muted" style="font-size:.8rem; text-transform:uppercase; letter-spacing:.6px;">
+                    <i class="bi bi-person-lines-fill me-1"></i> Información personal
+                </h6>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <p class="text-muted mb-0" style="font-size:.78rem;">Cédula de identidad</p>
+                        <p class="fw-semibold mb-0">{{ cliente.ci|default:'—' }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <p class="text-muted mb-0" style="font-size:.78rem;">Teléfono</p>
+                        <p class="fw-semibold mb-0">
+                            {% if cliente.telefono %}
+                            <a href="tel:{{ cliente.telefono }}" class="text-decoration-none text-dark">
+                                <i class="bi bi-telephone me-1 text-muted"></i>{{ cliente.telefono }}
+                            </a>
+                            {% else %}—{% endif %}
+                        </p>
+                    </div>
+                    <div class="col-sm-6">
+                        <p class="text-muted mb-0" style="font-size:.78rem;">Correo electrónico</p>
+                        <p class="fw-semibold mb-0">
+                            {% if cliente.email %}
+                            <a href="mailto:{{ cliente.email }}" class="text-decoration-none text-dark">
+                                <i class="bi bi-envelope me-1 text-muted"></i>{{ cliente.email }}
+                            </a>
+                            {% else %}—{% endif %}
+                        </p>
+                    </div>
+                    <div class="col-sm-6">
+                        <p class="text-muted mb-0" style="font-size:.78rem;">Abogado asignado</p>
+                        <p class="fw-semibold mb-0">
+                            {% if cliente.abogado_asignado %}
+                            <i class="bi bi-person-badge me-1 text-primary"></i>
+                            {{ cliente.abogado_asignado.get_full_name|default:cliente.abogado_asignado.username }}
+                            {% else %}
+                            <span class="text-warning">Sin asignar</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-12">
+                        <p class="text-muted mb-0" style="font-size:.78rem;">Dirección</p>
+                        <p class="fw-semibold mb-0">{{ cliente.direccion|default:'—' }}</p>
+                    </div>
+                    {% if cliente.notas_internas %}
+                    <div class="col-12">
+                        <p class="text-muted mb-0" style="font-size:.78rem;">
+                            <i class="bi bi-lock me-1"></i> Notas internas
+                            <span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size:.7rem;">Solo visible para abogados</span>
+                        </p>
+                        <p class="mb-0 mt-1 text-secondary" style="font-size:.88rem; background:#f8f9fc; border-radius:6px; padding:8px 10px;">
+                            {{ cliente.notas_internas }}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
-            <div class="card-body p-4">
-                <h6 class="mb-3">Expedientes activos</h6>
-                {% if casos %}
-                <div class="list-group">
-                    {% for caso in casos %}
-                        <a href="{% url 'detalle_caso' caso.pk %}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <div class="fw-semibold">{{ caso.numero_expediente }} — {{ caso.materia }}</div>
-                                    <small class="text-muted">{{ caso.nurej|default:'Sin NUREJ' }}</small>
-                                </div>
-                                <span class="badge rounded-pill bg-primary-subtle text-primary">{{ caso.estado }}</span>
-                            </div>
-                        </a>
-                    {% endfor %}
+
+    <!-- Código de acceso al portal -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:12px; background:linear-gradient(135deg,#1a2744 0%,#2e59a7 100%);">
+            <div class="card-body p-4 text-white d-flex flex-column justify-content-between">
+                <div>
+                    <p class="mb-1 opacity-75" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.6px;">
+                        <i class="bi bi-shield-lock me-1"></i> Código de acceso al portal
+                    </p>
+                    <h2 class="fw-bold mb-1 letter-spacing-2" style="letter-spacing:6px;">
+                        {{ cliente.codigo_acceso }}
+                    </h2>
+                    <p class="opacity-75 mb-0" style="font-size:.8rem;">
+                        Entrega este código al cliente para que consulte el estado de su caso.
+                    </p>
                 </div>
-                {% else %}
-                <div class="text-center text-muted py-4">
-                    <i class="bi bi-folder2-open fs-1 d-block mb-2 opacity-25"></i>
-                    No hay expedientes activos para este cliente.
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                    <a href="{% url 'portal_login' %}" target="_blank"
+                       class="btn btn-sm btn-light text-primary fw-semibold">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Ver portal
+                    </a>
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+
+<!-- Expedientes del cliente -->
+<div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+    <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0" style="font-size:.8rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d;">
+            <i class="bi bi-folder2-open me-1"></i> Expedientes activos
+        </h6>
+        <a href="{% url 'registrar_caso' %}?cliente={{ cliente.pk }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> Nuevo expediente
+        </a>
+    </div>
+    <div class="card-body p-0">
+        {% if expedientes %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:.88rem;">
+                <thead style="background:#f8f9fc; border-bottom:1px solid #e2e6ef;">
+                    <tr>
+                        <th class="ps-4 py-3" style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Expediente</th>
+                        <th style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Materia</th>
+                        <th style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Juzgado</th>
+                        <th style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Estado</th>
+                        <th class="text-end pe-4" style="font-size:.73rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exp in expedientes %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-semibold">{{ exp.numero_expediente|default:'Sin número' }}</div>
+                            <small class="text-muted">NUREJ: {{ exp.nurej|default:'—' }}</small>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill px-2"
+                                  style="background:#e8edf8; color:#2e59a7; font-size:.78rem;">
+                                {{ exp.materia }}
+                            </span>
+                        </td>
+                        <td class="text-muted" style="font-size:.85rem;">{{ exp.juzgado|default:'—'|truncatechars:30 }}</td>
+                        <td>
+                            {% if exp.estado == 'activo' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span>
+                            {% elif exp.estado == 'concluido' %}
+                                <span class="badge bg-secondary-subtle text-secondary border">Concluido</span>
+                            {% else %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ exp.get_estado_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'detalle_caso' exp.pk %}" class="btn btn-sm btn-outline-primary btn-sm">
+                                <i class="bi bi-folder2-open me-1"></i> Abrir
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-folder2-open fs-1 d-block mb-2 opacity-25"></i>
+            <p class="mb-2">Este cliente no tiene expedientes activos.</p>
+            <a href="{% url 'registrar_caso' %}?cliente={{ cliente.pk }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-file-earmark-plus me-1"></i> Crear primer expediente
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 {% endblock %}

@@ -1,32 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Reporte Expediente — {{ caso.nurej|default:caso.pk }}</title>
     <style>
-        @page { size: letter; margin: 2cm; }
-        body { font-family: Helvetica, Arial, sans-serif; color: #333; }
-        .header { text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
-        .titulo { font-size: 18pt; font-weight: bold; color: #2c3e50; }
-        .seccion-titulo { background-color: #f2f2f2; padding: 5px; font-weight: bold; margin-top: 20px; border-left: 5px solid #2c3e50; }
-        .dato-fila { margin: 10px 0; border-bottom: 0.5pt solid #eee; padding-bottom: 5px; }
-        .label { font-weight: bold; width: 150px; display: inline-block; }
+        @page { size: letter; margin: 2cm 2.2cm; }
+        body { font-family: Helvetica, Arial, sans-serif; color: #1a2744; font-size: 10pt; line-height: 1.5; }
+
+        /* Encabezado */
+        .header { display: table; width: 100%; border-bottom: 3px solid #1a2744; padding-bottom: 10px; margin-bottom: 18px; }
+        .header-left  { display: table-cell; vertical-align: middle; }
+        .header-right { display: table-cell; vertical-align: middle; text-align: right; width: 40%; }
+        .firma-bufete { font-size: 16pt; font-weight: bold; color: #1a2744; }
+        .firma-sub    { font-size: 8pt; color: #5a6a8a; letter-spacing: 1px; text-transform: uppercase; }
+        .fecha-reporte { font-size: 8pt; color: #5a6a8a; }
+        .doc-titulo   { font-size: 9pt; font-weight: bold; color: #2e59a7; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Secciones */
+        .seccion {
+            margin-top: 16px;
+            margin-bottom: 6px;
+            background-color: #1a2744;
+            color: #ffffff;
+            padding: 5px 10px;
+            font-size: 8.5pt;
+            font-weight: bold;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            border-radius: 3px;
+        }
+
+        /* Tabla de datos */
+        .datos-tabla { width: 100%; border-collapse: collapse; }
+        .datos-tabla td { padding: 5px 8px; font-size: 9.5pt; border-bottom: 1px solid #e8edf8; vertical-align: top; }
+        .datos-tabla .lbl { font-weight: bold; color: #5a6a8a; width: 38%; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .4px; }
+        .datos-tabla .val { color: #1a2744; }
+
+        /* Badge de estado */
+        .estado { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 8.5pt; font-weight: bold; }
+        .estado-activo    { background: #d1fae5; color: #065f46; }
+        .estado-concluido { background: #e0e7ff; color: #3730a3; }
+        .estado-archivado { background: #f1f5f9; color: #475569; }
+        .estado-abandono  { background: #fef3c7; color: #92400e; }
+
+        /* Badge materia */
+        .materia { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 8pt; font-weight: bold; background: #dbeafe; color: #1d4ed8; }
+
+        /* Movimientos */
+        .mov-tabla { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        .mov-tabla th { background: #e8edf8; color: #1a2744; font-size: 8pt; padding: 5px 8px;
+                        text-transform: uppercase; letter-spacing: .4px; font-weight: 700; text-align: left; }
+        .mov-tabla td { padding: 5px 8px; font-size: 9pt; border-bottom: 1px solid #f0f2f7; vertical-align: top; }
+        .mov-tabla tr:last-child td { border-bottom: none; }
+
+        /* Pie de página */
+        .pie { margin-top: 30px; padding-top: 10px; border-top: 1px solid #c8d3ea;
+               text-align: center; font-size: 7.5pt; color: #8a9abf; }
+        .firmas { display: table; width: 100%; margin-top: 40px; }
+        .firma-box { display: table-cell; text-align: center; width: 50%; padding: 0 20px; }
+        .firma-linea { border-top: 1px solid #1a2744; padding-top: 5px; font-size: 8pt; margin-top: 40px; }
+
+        /* Código QR / acceso portal */
+        .portal-box { background: #f0f4ff; border: 1px solid #c7d2fe; border-radius: 6px;
+                      padding: 8px 12px; margin-top: 6px; font-size: 9pt; }
+        .portal-codigo { font-size: 16pt; font-weight: bold; color: #1a2744; letter-spacing: 4px; }
     </style>
+</head>
+<body>
 
+    <!-- ENCABEZADO -->
     <div class="header">
-        <div class="titulo">CONSULTORIO JURÍDICO POPULAR</div>
-        <div>FICHA DE SEGUIMIENTO DE PROCESO</div>
-        <div style="font-size: 9pt;">Fecha de reporte: {{ fecha|date:"d/m/Y H:i" }}</div>
+        <div class="header-left">
+            <div class="firma-bufete">LexNova Bolivia</div>
+            <div class="firma-sub">Sistema Legal Digital · Despacho Jurídico</div>
+        </div>
+        <div class="header-right">
+            <div class="doc-titulo">Reporte de Expediente</div>
+            <div class="fecha-reporte">Generado el {{ fecha|date:"d/m/Y" }} a las {{ fecha|date:"H:i" }}</div>
+        </div>
     </div>
 
-    <div class="seccion-titulo">DATOS DEL PROCESO (NUREJ: {{ caso.nurej }})</div>
-    <div class="dato-fila"><span class="label">Materia:</span> {{ caso.materia }}</div>
-    <div class="dato-fila"><span class="label">Estado actual:</span> {% if caso.activo %}Activo{% else %}En Papelera{% endif %}</div>
-    
-    <div class="seccion-titulo">INFORMACIÓN DEL CLIENTE</div>
-    <div class="dato-fila"><span class="label">Nombre Completo:</span> {{ caso.cliente|upper }}</div>
-    
-    <div class="seccion-titulo">PERSONAL ASIGNADO</div>
-    <div class="dato-fila"><span class="label">Abogado Responsable:</span> {{ caso.abogado|default:"Sin asignar aún" }}</div>
+    <!-- DATOS DEL PROCESO -->
+    <div class="seccion">Datos del proceso judicial</div>
+    <table class="datos-tabla">
+        <tr>
+            <td class="lbl">Materia</td>
+            <td class="val"><span class="materia">{{ caso.materia }}</span></td>
+            <td class="lbl">Estado</td>
+            <td class="val">
+                <span class="estado estado-{{ caso.estado }}">
+                    {{ caso.get_estado_display }}
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <td class="lbl">N° Expediente</td>
+            <td class="val">{{ caso.numero_expediente|default:'—' }}</td>
+            <td class="lbl">NUREJ / IANUS</td>
+            <td class="val">{{ caso.nurej|default:'—' }}</td>
+        </tr>
+        <tr>
+            <td class="lbl">Tipo de proceso</td>
+            <td class="val">{{ caso.tipo_proceso|default:'—' }}</td>
+            <td class="lbl">Juzgado</td>
+            <td class="val">{{ caso.juzgado|default:'—' }}</td>
+        </tr>
+        <tr>
+            <td class="lbl">Fecha de inicio</td>
+            <td class="val">{{ caso.fecha_inicio|date:"d/m/Y" }}</td>
+            <td class="lbl">Fecha de conclusión</td>
+            <td class="val">{{ caso.fecha_conclusion|date:"d/m/Y"|default:'En curso' }}</td>
+        </tr>
+        {% if caso.descripcion %}
+        <tr>
+            <td class="lbl">Descripción</td>
+            <td class="val" colspan="3">{{ caso.descripcion }}</td>
+        </tr>
+        {% endif %}
+    </table>
 
-    <div style="margin-top: 50px; text-align: center; font-size: 8pt; color: #777;">
-        Este documento es una impresión oficial del sistema de control legal.
+    <!-- INFORMACIÓN DEL CLIENTE -->
+    <div class="seccion">Información del cliente</div>
+    <table class="datos-tabla">
+        <tr>
+            <td class="lbl">Nombre completo</td>
+            <td class="val">{{ caso.cliente.nombre_completo }}</td>
+            <td class="lbl">Cédula de identidad</td>
+            <td class="val">{{ caso.cliente.ci }}</td>
+        </tr>
+        <tr>
+            <td class="lbl">Teléfono</td>
+            <td class="val">{{ caso.cliente.telefono|default:'—' }}</td>
+            <td class="lbl">Correo electrónico</td>
+            <td class="val">{{ caso.cliente.email|default:'—' }}</td>
+        </tr>
+        <tr>
+            <td class="lbl">Dirección</td>
+            <td class="val" colspan="3">{{ caso.cliente.direccion|default:'—' }}</td>
+        </tr>
+    </table>
+
+    <!-- Código de acceso al portal -->
+    <div class="portal-box">
+        <strong>Código de acceso al portal del cliente:</strong>
+        <span class="portal-codigo">{{ caso.cliente.codigo_acceso }}</span>
+        <span style="font-size:8pt; color:#5a6a8a;">— El cliente puede consultar su caso en el portal con este código.</span>
     </div>
+
+    <!-- PERSONAL ASIGNADO -->
+    <div class="seccion">Personal asignado</div>
+    <table class="datos-tabla">
+        <tr>
+            <td class="lbl">Abogado responsable</td>
+            <td class="val">
+                {% if caso.abogado_asignado %}
+                    {{ caso.abogado_asignado.get_full_name|default:caso.abogado_asignado.username }}
+                {% else %}
+                    Sin asignar
+                {% endif %}
+            </td>
+            <td class="lbl">N° documentos adjuntos</td>
+            <td class="val">{{ caso.total_documentos }}</td>
+        </tr>
+    </table>
+
+    <!-- HISTORIAL DE MOVIMIENTOS -->
+    {% if caso.movimientos.all %}
+    <div class="seccion">Historial de movimientos procesales</div>
+    <table class="mov-tabla">
+        <thead>
+            <tr>
+                <th style="width:15%;">Fecha</th>
+                <th style="width:20%;">Tipo</th>
+                <th>Descripción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mov in caso.movimientos.all %}
+            <tr>
+                <td>{{ mov.fecha|date:"d/m/Y" }}</td>
+                <td>{{ mov.get_tipo_display }}</td>
+                <td>{{ mov.descripcion }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- EVENTOS / AUDIENCIAS -->
+    {% if caso.eventos.all %}
+    <div class="seccion">Audiencias y eventos agendados</div>
+    <table class="mov-tabla">
+        <thead>
+            <tr>
+                <th style="width:22%;">Fecha y hora</th>
+                <th style="width:20%;">Tipo</th>
+                <th>Título / Lugar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ev in caso.eventos.all %}
+            <tr>
+                <td>{{ ev.fecha_hora|date:"d/m/Y H:i" }}</td>
+                <td>{{ ev.get_tipo_display }}</td>
+                <td>{{ ev.titulo }}{% if ev.lugar %} — {{ ev.lugar }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- FIRMAS -->
+    <div class="firmas">
+        <div class="firma-box">
+            <div class="firma-linea">
+                {{ caso.cliente.nombre_completo }}<br>
+                <span style="font-size:7.5pt; color:#8a9abf;">Cliente</span>
+            </div>
+        </div>
+        <div class="firma-box">
+            <div class="firma-linea">
+                {% if caso.abogado_asignado %}
+                    {{ caso.abogado_asignado.get_full_name|default:caso.abogado_asignado.username }}
+                {% else %}
+                    Abogado responsable
+                {% endif %}<br>
+                <span style="font-size:7.5pt; color:#8a9abf;">Abogado — LexNova Bolivia</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIE DE PÁGINA -->
+    <div class="pie">
+        Este documento es una impresión oficial del Sistema LexNova Bolivia. &nbsp;|&nbsp;
+        Generado el {{ fecha|date:"d/m/Y" }} &nbsp;|&nbsp;
+        Expediente {{ caso.numero_expediente|default:caso.nurej|default:caso.pk }}
+    </div>
+
 </body>
 </html>
-{% endblock %}

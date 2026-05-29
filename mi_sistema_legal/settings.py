@@ -3,21 +3,21 @@ from pathlib import Path
 from dotenv import load_dotenv
 from django.contrib.messages import constants as messages
 
-# ══════════════════════════════════════════════
-# SEGURIDAD
-# ══════════════════════════════════════════════
-load_dotenv()  # carga el .env automáticamente
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-DEBUG      = True
+#SEGURIDAD
+# ADVERTENCIA DE SEGURIDAD: Cambiar esta clave antes de pasar a producción.
+# Generá una nueva con: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') 
+SECRET_KEY = os.environ.get('SECRET_KEY') 
+
+# CORRECCIÓN: DEBUG debe ser False en producción
+DEBUG = True
+
 ALLOWED_HOSTS = []
 
-# ══════════════════════════════════════════════
-# APLICACIONES
-# ══════════════════════════════════════════════
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -26,13 +26,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'control_legal',
-    'usuarios',
+    'usuarios',   # CORRECCIÓN: habilitada (el app existe con modelos y urls)
 ]
 
-
-# ══════════════════════════════════════════════
-# MIDDLEWARE
-# ══════════════════════════════════════════════
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -43,17 +39,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+ROOT_URLCONF = 'mi_sistema_legal.urls'
 
-# ══════════════════════════════════════════════
-# URLS Y WSGI
-# ══════════════════════════════════════════════
-ROOT_URLCONF      = 'mi_sistema_legal.urls'
-WSGI_APPLICATION  = 'mi_sistema_legal.wsgi.application'
-
-
-# ══════════════════════════════════════════════
-# TEMPLATES
-# ══════════════════════════════════════════════
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -70,10 +57,8 @@ TEMPLATES = [
     },
 ]
 
+WSGI_APPLICATION = 'mi_sistema_legal.wsgi.application'
 
-# ══════════════════════════════════════════════
-# BASE DE DATOS
-# ══════════════════════════════════════════════
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -81,10 +66,6 @@ DATABASES = {
     }
 }
 
-
-# ══════════════════════════════════════════════
-# VALIDACIÓN DE CONTRASEÑAS
-# ══════════════════════════════════════════════
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -92,35 +73,25 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
-# ══════════════════════════════════════════════
-# IDIOMA Y ZONA HORARIA — BOLIVIA
-# ══════════════════════════════════════════════
+# Idioma y zona horaria Bolivia
 LANGUAGE_CODE = 'es'
 TIME_ZONE     = 'America/La_Paz'
 USE_I18N      = True
 USE_TZ        = True
 
+# Archivos estáticos y subidos
+# CORRECCIÓN: eliminadas las definiciones duplicadas que sobreescribían valores
+STATIC_URL  = 'static/'
+MEDIA_URL   = '/media/'
+MEDIA_ROOT  = BASE_DIR / 'media'
 
-# ══════════════════════════════════════════════
-# ARCHIVOS ESTÁTICOS Y MEDIA
-# ══════════════════════════════════════════════
-STATIC_URL = '/static/'
-MEDIA_URL  = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Autenticación
+LOGIN_URL            = 'login'
+LOGIN_REDIRECT_URL   = 'dashboard'
+LOGOUT_REDIRECT_URL  = 'login'
 
-
-# ══════════════════════════════════════════════
-# AUTENTICACIÓN
-# ══════════════════════════════════════════════
-LOGIN_URL           = 'login'
-LOGIN_REDIRECT_URL  = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
-
-
-# ══════════════════════════════════════════════
-# MENSAJES FLASH — BOOTSTRAP 5
-# ══════════════════════════════════════════════
+# Colores de mensajes flash para Bootstrap
+from django.contrib.messages import constants as messages
 MESSAGE_TAGS = {
     messages.DEBUG:   'secondary',
     messages.INFO:    'info',
@@ -129,10 +100,9 @@ MESSAGE_TAGS = {
     messages.ERROR:   'danger',
 }
 
-
-# ══════════════════════════════════════════════
-# CLAVE PRIMARIA POR DEFECTO
-# ══════════════════════════════════════════════
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-GEMINI_API_KEY='AIzaSyDt6r7suDjOSAk7OHp8RzVXCDDIG9Dw3-g'
+# Gemini AI
+# ADVERTENCIA DE SEGURIDAD: Mover esta clave a una variable de entorno antes de producción.
+# Usar: os.environ.get('GEMINI_API_KEY')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')

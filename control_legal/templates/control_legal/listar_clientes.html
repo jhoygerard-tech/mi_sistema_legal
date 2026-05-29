@@ -3,44 +3,134 @@
 {% block topbar_titulo %}Clientes{% endblock %}
 
 {% block contenido %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+
+<!-- Encabezado + buscador + botón nuevo -->
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
     <div>
         <h5 class="fw-bold mb-0">Clientes registrados</h5>
-        <p class="text-muted mb-0" style="font-size:.9rem;">Administra clientes y sus expedientes.</p>
+        <p class="text-muted mb-0" style="font-size:.9rem;">
+            Administra los clientes del bufete y sus expedientes.
+        </p>
     </div>
     <a href="{% url 'registrar_cliente' %}" class="btn btn-primary btn-sm">
         <i class="bi bi-person-plus me-1"></i> Nuevo cliente
     </a>
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius:12px;">
+<!-- Barra de búsqueda -->
+<form method="GET" class="mb-3">
+    <div class="input-group" style="max-width:380px;">
+        <span class="input-group-text bg-white border-end-0">
+            <i class="bi bi-search text-muted"></i>
+        </span>
+        <input type="text" name="buscar" value="{{ busqueda }}"
+               class="form-control border-start-0 ps-0"
+               placeholder="Buscar por nombre, CI o teléfono…">
+        {% if busqueda %}
+        <a href="{% url 'listar_clientes' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+    </div>
+</form>
+
+<!-- Tabla de clientes -->
+<div class="card border-0 shadow-sm" style="border-radius:12px; overflow:hidden;">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0" style="font-size:.9rem;">
-            <thead class="table-light">
+            <thead style="background:#f8f9fc; border-bottom:2px solid #e2e6ef;">
                 <tr>
-                    <th class="ps-4 py-3">Cliente</th>
-                    <th>Documento</th>
-                    <th>Teléfono</th>
-                    <th>Email</th>
-                    <th class="text-end pe-4">Acciones</th>
+                    <th class="ps-4 py-3" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">
+                        Cliente
+                    </th>
+                    <th style="font-size:.75rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">
+                        CI / Documento
+                    </th>
+                    <th style="font-size:.75rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">
+                        Teléfono
+                    </th>
+                    <th style="font-size:.75rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">
+                        Abogado asignado
+                    </th>
+                    <th class="text-end pe-4" style="font-size:.75rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">
+                        Acciones
+                    </th>
                 </tr>
             </thead>
             <tbody>
                 {% for cliente in clientes %}
                 <tr>
+                    <!-- Nombre + fecha de registro -->
                     <td class="ps-4">
-                        <div class="fw-semibold">{{ cliente.nombre_completo }}</div>
-                        <small class="text-muted">Registrado el {{ cliente.fecha_registro|date:'d/m/Y' }}</small>
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- Avatar inicial -->
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                 style="width:38px; height:38px; background:#e8edf8; color:#2e59a7; font-weight:700; font-size:.95rem;">
+                                {{ cliente.nombre_completo|first|upper }}
+                            </div>
+                            <div>
+                                <div class="fw-semibold" style="color:#1a2744;">
+                                    {{ cliente.nombre_completo }}
+                                </div>
+                                <small class="text-muted">
+                                    Registrado el {{ cliente.fecha_registro|date:'d/m/Y' }}
+                                </small>
+                            </div>
+                        </div>
                     </td>
-                    <td>{{ cliente.ci|default:'-' }}</td>
-                    <td>{{ cliente.telefono|default:'-' }}</td>
-                    <td>{{ cliente.email|default:'-' }}</td>
+
+                    <!-- CI -->
+                    <td>
+                        <span class="badge bg-light text-secondary border px-2 py-1"
+                              style="font-size:.82rem; font-weight:500;">
+                            {{ cliente.ci|default:'—' }}
+                        </span>
+                    </td>
+
+                    <!-- Teléfono -->
+                    <td>
+                        {% if cliente.telefono %}
+                        <a href="tel:{{ cliente.telefono }}" class="text-decoration-none text-dark">
+                            <i class="bi bi-telephone me-1 text-muted" style="font-size:.8rem;"></i>
+                            {{ cliente.telefono }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Abogado asignado (reemplaza al Email) -->
+                    <td>
+                        {% if cliente.abogado_asignado %}
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-success d-flex align-items-center justify-content-center flex-shrink-0"
+                                 style="width:24px; height:24px;">
+                                <i class="bi bi-person-fill text-white" style="font-size:.7rem;"></i>
+                            </div>
+                            <span style="font-size:.88rem;">
+                                {{ cliente.abogado_asignado.get_full_name|default:cliente.abogado_asignado.username }}
+                            </span>
+                        </div>
+                        {% else %}
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2">
+                            <i class="bi bi-exclamation-circle me-1"></i> Sin asignar
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Acciones -->
                     <td class="text-end pe-4">
-                        <a href="{% url 'detalle_cliente' cliente.pk %}" class="btn btn-sm btn-white border text-primary me-1" title="Ver cliente">
+                        <!-- Ver detalle -->
+                        <a href="{% url 'detalle_cliente' cliente.pk %}"
+                           class="btn btn-sm btn-white border text-primary me-1"
+                           title="Ver ficha del cliente">
                             <i class="bi bi-eye"></i>
                         </a>
-                        <a href="{% url 'registrar_caso' %}?cliente={{ cliente.pk }}" class="btn btn-sm btn-white border text-success" title="Nuevo expediente">
-                            <i class="bi bi-folder-plus"></i>
+                        <!-- Editar datos (reemplaza al "agregar expediente") -->
+                        <a href="{% url 'editar_cliente' cliente.pk %}"
+                           class="btn btn-sm btn-white border text-secondary"
+                           title="Editar cliente">
+                            <i class="bi bi-pencil"></i>
                         </a>
                     </td>
                 </tr>
@@ -48,12 +138,33 @@
                 <tr>
                     <td colspan="5" class="text-center text-muted py-5">
                         <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
-                        No hay clientes registrados.
+                        {% if busqueda %}
+                            No se encontraron clientes con "<strong>{{ busqueda }}</strong>".
+                        {% else %}
+                            No hay clientes registrados todavía.
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    <!-- Pie de tabla: contador -->
+    {% if clientes %}
+    <div class="px-4 py-2 border-top d-flex align-items-center justify-content-between"
+         style="background:#fafbfc; font-size:.82rem; color:#6c757d;">
+        <span>
+            <i class="bi bi-people me-1"></i>
+            {{ clientes|length }} cliente{{ clientes|length|pluralize }} encontrado{{ clientes|length|pluralize }}
+        </span>
+        {% if busqueda %}
+        <a href="{% url 'listar_clientes' %}" class="text-decoration-none text-muted">
+            <i class="bi bi-x-circle me-1"></i> Limpiar búsqueda
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
+
 {% endblock %}

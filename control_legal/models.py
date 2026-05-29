@@ -2,27 +2,25 @@ from django.db import models
 from django.contrib.auth.models import User
 import uuid
 
-# ═══════════════════════════pyt═══════════════════
-# 1. CLIENTE  (la raíz de todo)
+# ══════════════════════════════════════════════
+# 1. CLIENTE
 # ══════════════════════════════════════════════
 class Cliente(models.Model):
-    # Datos personales
     ci              = models.CharField(max_length=20, unique=True, verbose_name="Cédula de identidad")
     nombre_completo = models.CharField(max_length=200, verbose_name="Nombre completo")
     telefono        = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
     email           = models.EmailField(blank=True, verbose_name="Correo electrónico")
     direccion       = models.TextField(blank=True, verbose_name="Dirección")
 
-    # Relación con el abogado responsable
     abogado_asignado = models.ForeignKey(
         User, on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='clientes',
         verbose_name="Abogado asignado"
     )
-        
+
     codigo_acceso = models.CharField(
-        max_length=12, unique=True, blank=True,null=True,
+        max_length=12, unique=True, blank=True, null=True,
         verbose_name="Código de acceso del cliente"
     )
 
@@ -32,7 +30,6 @@ class Cliente(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.codigo_acceso:
-            # Genera un código de 8 caracteres en mayúsculas
             self.codigo_acceso = uuid.uuid4().hex[:8].upper()
         super().save(*args, **kwargs)
 
@@ -52,16 +49,18 @@ class Cliente(models.Model):
 
 
 # ══════════════════════════════════════════════
-# 2. EXPEDIENTE  (pertenece a un Cliente)
+# 2. EXPEDIENTE
 # ══════════════════════════════════════════════
 class Expediente(models.Model):
     ESTADO_ACTIVO    = 'activo'
     ESTADO_CONCLUIDO = 'concluido'
     ESTADO_ARCHIVADO = 'archivado'
+    ESTADO_ABANDONO  = 'abandono'   # ← NUEVO
     ESTADOS = [
         (ESTADO_ACTIVO,    'Activo'),
         (ESTADO_CONCLUIDO, 'Concluido'),
         (ESTADO_ARCHIVADO, 'Archivado'),
+        (ESTADO_ABANDONO,  'Abandono'),  # ← NUEVO
     ]
 
     MATERIAS = [
@@ -74,7 +73,6 @@ class Expediente(models.Model):
         ('Otro',            'Otro'),
     ]
 
-    # Relación principal: el expediente pertenece a un cliente
     cliente = models.ForeignKey(
         Cliente, on_delete=models.PROTECT,
         related_name='expedientes',
@@ -87,7 +85,6 @@ class Expediente(models.Model):
         verbose_name="Abogado responsable"
     )
 
-    # Datos del proceso judicial
     numero_expediente = models.CharField(max_length=50, blank=True, verbose_name="N° de expediente")
     nurej             = models.CharField(max_length=50, blank=True, verbose_name="NUREJ")
     juzgado           = models.CharField(max_length=200, blank=True, verbose_name="Juzgado")
@@ -99,7 +96,6 @@ class Expediente(models.Model):
     fecha_inicio      = models.DateField(auto_now_add=True, verbose_name="Fecha de inicio")
     fecha_conclusion  = models.DateField(null=True, blank=True, verbose_name="Fecha de conclusión")
 
-    # Para compatibilidad con tu código actual
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -115,7 +111,7 @@ class Expediente(models.Model):
 
 
 # ══════════════════════════════════════════════
-# 3. DOCUMENTO  (se agrega al expediente conforme avanza el proceso)
+# 3. DOCUMENTO
 # ══════════════════════════════════════════════
 class Documento(models.Model):
     TIPOS = [
@@ -160,7 +156,7 @@ class Documento(models.Model):
 
 
 # ══════════════════════════════════════════════
-# 4. MOVIMIENTO  (historial del proceso)
+# 4. MOVIMIENTO
 # ══════════════════════════════════════════════
 class Movimiento(models.Model):
     TIPOS = [
@@ -194,6 +190,7 @@ class Movimiento(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_display()} — {self.fecha} — {self.expediente}"
+
 
 # ══════════════════════════════════════════════
 # 5. EVENTO DE AGENDA
@@ -253,8 +250,9 @@ class Evento(models.Model):
         from datetime import timedelta
         return self.fecha_hora <= timezone.now() + timedelta(days=2)
 
+
 # ══════════════════════════════════════════════
-# 6. TAREA (control de pasantes/procuradores)
+# 6. TAREA
 # ══════════════════════════════════════════════
 class Tarea(models.Model):
     PRIORIDAD_ALTA   = 'alta'
@@ -310,6 +308,7 @@ class Tarea(models.Model):
         from django.utils import timezone
         return self.fecha_limite < timezone.now().date() and self.estado != self.ESTADO_COMPLETADA
 
+
 # ══════════════════════════════════════════════
 # 7. EVIDENCIA DE TAREA
 # ══════════════════════════════════════════════
@@ -338,6 +337,7 @@ class EvidenciaTarea(models.Model):
     def __str__(self):
         return f"Evidencia de: {self.tarea.titulo}"
 
+
 # ══════════════════════════════════════════════
 # 8. PLANTILLA DE CONTRATO
 # ══════════════════════════════════════════════
@@ -353,14 +353,7 @@ class PlantillaContrato(models.Model):
 
     nombre      = models.CharField(max_length=200, verbose_name="Nombre de la plantilla")
     tipo        = models.CharField(max_length=30, choices=TIPOS, default='honorarios')
-    contenido   = models.TextField(
-        verbose_name="Contenido de la plantilla",
-        help_text=(
-            "Usa estas variables: {{cliente_nombre}}, {{cliente_ci}}, "
-            "{{cliente_direccion}}, {{abogado_nombre}}, {{fecha_hoy}}, "
-            "{{expediente_nurej}}, {{monto}}, {{ciudad}}"
-        )
-    )
+    contenido   = models.TextField(verbose_name="Contenido de la plantilla")
     activa      = models.BooleanField(default=True)
     creada_por  = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True,
@@ -420,6 +413,7 @@ class Contrato(models.Model):
     def __str__(self):
         return f"{self.titulo} — {self.cliente.nombre_completo}"
 
+
 # ══════════════════════════════════════════════
 # 10. PLANTILLA DE MEMORIAL
 # ══════════════════════════════════════════════
@@ -434,35 +428,11 @@ class PlantillaMemorial(models.Model):
         ('otro',               'Otro'),
     ]
 
-    nombre      = models.CharField(
-        max_length=200,
-        verbose_name="Nombre del memorial",
-        help_text="Ej: Demanda de Asistencia Familiar"
-    )
-    categoria   = models.CharField(
-        max_length=30, choices=CATEGORIAS, default='civil',
-        verbose_name="Categoría"
-    )
-    descripcion = models.TextField(
-        blank=True,
-        verbose_name="Descripción breve",
-        help_text="Explica cuándo se usa este memorial"
-    )
-    estructura  = models.TextField(
-        verbose_name="Estructura / molde del memorial",
-        help_text=(
-            "Escribe aquí la estructura que la IA debe seguir. "
-            "Puedes incluir las secciones obligatorias, el tono, "
-            "las normas legales aplicables y los datos que debe pedir. "
-            "Variables disponibles: {{cliente_nombre}}, {{cliente_ci}}, "
-            "{{expediente_nurej}}, {{juzgado}}, {{abogado_nombre}}, {{ciudad}}, {{fecha_hoy}}"
-        )
-    )
-    normas_aplicables = models.TextField(
-        blank=True,
-        verbose_name="Normas legales aplicables",
-        help_text="Ej: Art. 109 Código de Familia, Art. 5 Ley 603"
-    )
+    nombre      = models.CharField(max_length=200, verbose_name="Nombre del memorial")
+    categoria   = models.CharField(max_length=30, choices=CATEGORIAS, default='civil', verbose_name="Categoría")
+    descripcion = models.TextField(blank=True, verbose_name="Descripción breve")
+    estructura  = models.TextField(verbose_name="Estructura / molde del memorial")
+    normas_aplicables = models.TextField(blank=True, verbose_name="Normas legales aplicables")
     activa      = models.BooleanField(default=True, verbose_name="Activa")
     creada_por  = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True,
@@ -517,6 +487,7 @@ class Memorial(models.Model):
     def __str__(self):
         return f"{self.titulo} — {self.cliente.nombre_completo}"
 
+
 # ══════════════════════════════════════════════
 # 12. PRECEDENTE JURISPRUDENCIAL
 # ══════════════════════════════════════════════
@@ -531,11 +502,11 @@ class PrecedenteJurisprudencial(models.Model):
         (TRIBUNAL_OTRO, 'Otro tribunal'),
     ]
 
-    TIPO_SCP  = 'scp'    # Sentencia Constitucional Plurinacional
-    TIPO_SC   = 'sc'     # Sentencia Constitucional
-    TIPO_AS   = 'as'     # Auto Supremo
-    TIPO_AC   = 'ac'     # Auto Constitucional
-    TIPO_DCP  = 'dcp'    # Declaración Constitucional Plurinacional
+    TIPO_SCP  = 'scp'
+    TIPO_SC   = 'sc'
+    TIPO_AS   = 'as'
+    TIPO_AC   = 'ac'
+    TIPO_DCP  = 'dcp'
     TIPO_OTRO = 'otro'
     TIPOS = [
         (TIPO_SCP,  'Sentencia Constitucional Plurinacional (SCP)'),
@@ -568,55 +539,26 @@ class PrecedenteJurisprudencial(models.Model):
         (ORIGEN_IA,      'Generado/completado por IA'),
     ]
 
-    # ── Identificación ────────────────────────
-    tribunal         = models.CharField(max_length=10, choices=TRIBUNALES,
-                                        default=TRIBUNAL_TCP, verbose_name="Tribunal")
-    tipo_resolucion  = models.CharField(max_length=10, choices=TIPOS,
-                                        default=TIPO_SCP, verbose_name="Tipo de resolución")
-    numero_sentencia = models.CharField(max_length=50, unique=True,
-                                        verbose_name="Número de sentencia",
-                                        help_text="Ej: 0732/2023-S2 o AS 234/2021")
-    fecha_resolucion = models.DateField(null=True, blank=True,
-                                        verbose_name="Fecha de resolución")
-    materia          = models.CharField(max_length=30, choices=MATERIAS,
-                                        default='civil', verbose_name="Materia")
-
-    # ── Magistrados ───────────────────────────
-    magistrado_relator = models.CharField(max_length=200, blank=True,
-                                          verbose_name="Magistrado relator")
-    sala               = models.CharField(max_length=100, blank=True,
-                                          verbose_name="Sala / Comisión",
-                                          help_text="Ej: Primera Sala, Sala Civil")
-
-    # ── Contenido jurídico ────────────────────
-    accion_origen    = models.CharField(max_length=200, blank=True,
-                                        verbose_name="Acción de origen",
-                                        help_text="Ej: Acción de Amparo Constitucional, Recurso de Casación")
-    palabras_clave   = models.TextField(blank=True,
-                                        verbose_name="Palabras clave",
-                                        help_text="Separadas por coma. Ej: debido proceso, tutela, presunción de inocencia")
-    ratio_decidendi  = models.TextField(blank=True,
-                                        verbose_name="Ratio Decidendi",
-                                        help_text="La regla jurídica central que establece la sentencia")
-    resumen_ia       = models.TextField(blank=True,
-                                        verbose_name="Resumen generado por IA",
-                                        help_text="Resumen automático del holding y su aplicación práctica")
-    texto_completo   = models.TextField(blank=True,
-                                        verbose_name="Texto completo de la sentencia")
-
-    # ── Referencia y trazabilidad ─────────────
-    url_fuente       = models.URLField(blank=True,
-                                       verbose_name="URL fuente (TCP/TSJ)",
-                                       help_text="Link directo a la sentencia en el sitio oficial")
-    origen           = models.CharField(max_length=10, choices=ORIGENES,
-                                        default=ORIGEN_MANUAL, verbose_name="Origen del registro")
+    tribunal         = models.CharField(max_length=10, choices=TRIBUNALES, default=TRIBUNAL_TCP, verbose_name="Tribunal")
+    tipo_resolucion  = models.CharField(max_length=10, choices=TIPOS, default=TIPO_SCP, verbose_name="Tipo de resolución")
+    numero_sentencia = models.CharField(max_length=50, unique=True, verbose_name="Número de sentencia")
+    fecha_resolucion = models.DateField(null=True, blank=True, verbose_name="Fecha de resolución")
+    materia          = models.CharField(max_length=30, choices=MATERIAS, default='civil', verbose_name="Materia")
+    magistrado_relator = models.CharField(max_length=200, blank=True, verbose_name="Magistrado relator")
+    sala               = models.CharField(max_length=100, blank=True, verbose_name="Sala / Comisión")
+    accion_origen    = models.CharField(max_length=200, blank=True, verbose_name="Acción de origen")
+    palabras_clave   = models.TextField(blank=True, verbose_name="Palabras clave")
+    ratio_decidendi  = models.TextField(blank=True, verbose_name="Ratio Decidendi")
+    resumen_ia       = models.TextField(blank=True, verbose_name="Resumen generado por IA")
+    texto_completo   = models.TextField(blank=True, verbose_name="Texto completo de la sentencia")
+    url_fuente       = models.URLField(blank=True, verbose_name="URL fuente (TCP/TSJ)")
+    origen           = models.CharField(max_length=10, choices=ORIGENES, default=ORIGEN_MANUAL, verbose_name="Origen del registro")
     ingresado_por    = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='precedentes_ingresados',
         verbose_name="Ingresado por"
     )
-    verificado       = models.BooleanField(default=False,
-                                           verbose_name="Verificado por abogado")
+    verificado       = models.BooleanField(default=False, verbose_name="Verificado por abogado")
     fecha_ingreso    = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -635,7 +577,6 @@ class PrecedenteJurisprudencial(models.Model):
         return f"{self.get_tipo_resolucion_display()} {self.numero_sentencia} — {self.get_materia_display()}"
 
     def get_palabras_lista(self):
-        """Retorna las palabras clave como lista."""
         if self.palabras_clave:
             return [p.strip() for p in self.palabras_clave.split(',') if p.strip()]
-        return [] 
+        return []

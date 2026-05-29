@@ -33,42 +33,58 @@ urlpatterns = [
     path('agenda/<int:pk>/eliminar/', views.eliminar_evento,   name='eliminar_evento'),
 
     # Tareas
-    path('tareas/',                       views.lista_tareas,         name='lista_tareas'),
-    path('tareas/nueva/',                 views.crear_tarea,          name='crear_tarea'),
-    path('tareas/<int:pk>/',              views.detalle_tarea,        name='detalle_tarea'),
-    path('tareas/<int:pk>/editar/',       views.editar_tarea,         name='editar_tarea'),
-    path('tareas/<int:pk>/estado/',       views.cambiar_estado_tarea, name='cambiar_estado_tarea'),
-    
-    # GEMINI
+    path('tareas/',                   views.lista_tareas,         name='lista_tareas'),
+    path('tareas/nueva/',             views.crear_tarea,          name='crear_tarea'),
+    path('tareas/<int:pk>/',          views.detalle_tarea,        name='detalle_tarea'),
+    path('tareas/<int:pk>/editar/',   views.editar_tarea,         name='editar_tarea'),
+    path('tareas/<int:pk>/estado/',   views.cambiar_estado_tarea, name='cambiar_estado_tarea'),
+
+    # Contratos
+    # CORRECCIÓN: 'contratos/ia/' debe ir ANTES de 'contratos/<int:pk>/'
+    # Si 'ia' va después, Django intenta convertir "ia" a int → ValueError → 404.
     path('contratos/',                  views.lista_contratos,       name='lista_contratos'),
     path('contratos/generar/',          views.generar_contrato,      name='generar_contrato'),
+    path('contratos/ia/',               views.generar_contrato_ia,   name='generar_contrato_ia'),  # MOVIDA ANTES de <int:pk>
     path('contratos/<int:pk>/',         views.ver_contrato,          name='ver_contrato'),
     path('contratos/<int:pk>/pdf/',     views.exportar_contrato_pdf, name='exportar_contrato_pdf'),
-    path('plantillas/',                 views.lista_plantillas,       name='lista_plantillas'),
-    path('plantillas/nueva/',           views.crear_plantilla,        name='crear_plantilla'),
-    path('plantillas/<int:pk>/editar/', views.editar_plantilla,       name='editar_plantilla'),
-    path('contratos/ia/',               views.generar_contrato_ia,    name='generar_contrato_ia'),
 
-    # Reportes
-    path('reportes/',                         views.reportes,              name='reportes'),
+    # Plantillas de contrato
+    path('plantillas/',                 views.lista_plantillas,      name='lista_plantillas'),
+    path('plantillas/nueva/',           views.crear_plantilla,       name='crear_plantilla'),
+    path('plantillas/<int:pk>/editar/', views.editar_plantilla,      name='editar_plantilla'),
+
+    # Reportes con gráficos
+    path('reportes/',                   views.reportes,              name='reportes'),
 
     # Portal del cliente (público — sin login del bufete)
-    path('portal/',                           views.portal_login,          name='portal_login'),
-    path('portal/mi-caso/',                   views.portal_cliente,        name='portal_cliente'),
-    path('portal/salir/',                     views.portal_logout,         name='portal_logout'),
+    path('portal/',                     views.portal_login,          name='portal_login'),
+    path('portal/mi-caso/',             views.portal_cliente,        name='portal_cliente'),
+    path('portal/salir/',               views.portal_logout,         name='portal_logout'),
 
     # Memoriales
-    path('memoriales/',                       views.lista_memoriales,      name='lista_memoriales'),
-    path('memoriales/generar/',               views.generar_memorial,      name='generar_memorial'),
-    path('memoriales/<int:pk>/',              views.ver_memorial,          name='ver_memorial'),
-    path('memoriales/<int:pk>/pdf/',          views.exportar_memorial_pdf, name='exportar_memorial_pdf'),
+    path('memoriales/',                 views.lista_memoriales,      name='lista_memoriales'),
+    path('memoriales/generar/',         views.generar_memorial,      name='generar_memorial'),
+    path('memoriales/<int:pk>/',        views.ver_memorial,          name='ver_memorial'),
+    path('memoriales/<int:pk>/pdf/',    views.exportar_memorial_pdf, name='exportar_memorial_pdf'),
 
     # Jurisprudencia
-    # 
-    path('jurisprudencia/',                   views.jurisprudencia_asistente, name='jurisprudencia_asistente'),
+    path('jurisprudencia/',             views.jurisprudencia_asistente, name='jurisprudencia_asistente'),
 
     # Liquidación Asistencia Familiar (Ley 603)
-    path('asistencia-familiar/',                        views.calculadora_asistencia, name='calculadora_asistencia'),
-    path('expediente/<int:pk>/asistencia-familiar/',    views.calculadora_asistencia_expediente, name='calculadora_asistencia_expediente'),
-    path('expediente/<int:pk>/asistencia-familiar/ia/', views.api_extraer_ia_liquidacion, name='api_extraer_ia_liquidacion'),
+    path('asistencia-familiar/',
+         views.calculadora_asistencia,
+         name='calculadora_asistencia'),
+
+    path('expediente/<int:pk>/asistencia-familiar/',
+         views.calculadora_asistencia_expediente,
+         name='calculadora_asistencia_expediente'),
+
+    path('expediente/<int:pk>/asistencia-familiar/ia/',
+         views.api_extraer_ia_liquidacion,
+         name='api_extraer_ia_liquidacion'),
+
+    # CORRECCIÓN: ruta de descarga del PDF de liquidación (faltaba completamente)
+    path('asistencia-familiar/pdf/',
+         views.exportar_liquidacion_pdf,
+         name='exportar_liquidacion_pdf'),
 ]
