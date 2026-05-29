@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Cliente, Expediente, Documento, Movimiento, Evento, Tarea, EvidenciaTarea, PlantillaContrato, Contrato
+from .models import Cliente, Expediente, Documento, Movimiento, Evento, Tarea, EvidenciaTarea, PlantillaContrato, Contrato, ComentarioTarea
 from django.contrib.auth.models import User
 
 # ── Formulario de Cliente ─────────────────────
@@ -129,15 +129,19 @@ class TareaForm(forms.ModelForm):
     class Meta:
         model  = Tarea
         fields = ['titulo', 'descripcion', 'expediente', 'asignada_a',
-                  'prioridad', 'estado', 'fecha_limite']
+                  'prioridad', 'estado', 'fecha_limite',
+                  'horas_estimadas', 'es_recurrente', 'frecuencia_recurrencia']
         widgets = {
-            'titulo':      forms.TextInput(attrs={'class': 'form-control'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'expediente':  forms.Select(attrs={'class': 'form-select'}),
-            'asignada_a':  forms.Select(attrs={'class': 'form-select'}),
-            'prioridad':   forms.Select(attrs={'class': 'form-select'}),
-            'estado':      forms.Select(attrs={'class': 'form-select'}),
-            'fecha_limite':forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'titulo':       forms.TextInput(attrs={'class': 'form-control'}),
+            'descripcion':  forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'expediente':   forms.Select(attrs={'class': 'form-select'}),
+            'asignada_a':   forms.Select(attrs={'class': 'form-select'}),
+            'prioridad':    forms.Select(attrs={'class': 'form-select'}),
+            'estado':       forms.Select(attrs={'class': 'form-select'}),
+            'fecha_limite': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'horas_estimadas': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'min': '0', 'placeholder': 'ej. 2.5'}),
+            'es_recurrente': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'frecuencia_recurrencia': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -145,9 +149,8 @@ class TareaForm(forms.ModelForm):
         self.fields['expediente'].queryset = Expediente.objects.filter(
             activo=True).select_related('cliente').order_by('cliente__nombre_completo')
         self.fields['expediente'].empty_label = "— Sin expediente específico —"
-        self.fields['asignada_a'].queryset = User.objects.filter(
-            is_active=True).order_by('first_name')
-
+        self.fields['asignada_a'].queryset = User.objects.filter(is_active=True).order_by('first_name')
+        self.fields['frecuencia_recurrencia'].required = False
 
 # ── Formulario de Evidencia ───────────────────
 class EvidenciaForm(forms.ModelForm):
@@ -223,3 +226,16 @@ class GenerarContratoForm(forms.ModelForm):
         self.fields['expediente'].queryset = Expediente.objects.filter(activo=True).select_related('cliente')
         self.fields['expediente'].empty_label = "— Sin expediente específico —"
         self.fields['contenido_final'].required = False
+
+class ComentarioTareaForm(forms.ModelForm):
+    class Meta:
+        model  = ComentarioTarea
+        fields = ['texto']
+        widgets = {
+            'texto': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Escribe un comentario o avance…',
+            }),
+        }
+        labels = {'texto': ''}

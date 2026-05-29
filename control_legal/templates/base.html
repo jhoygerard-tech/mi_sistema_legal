@@ -184,9 +184,54 @@
     <i class="bi bi-list fs-5"></i>
   </button>
   <span class="topbar-title">{% block topbar_titulo %}Panel de Control{% endblock %}</span>
-  <button class="btn btn-sm btn-light me-2 position-relative">
-    <i class="bi bi-bell"></i>
+<div class="dropdown me-2">
+  <button class="btn btn-light btn-sm position-relative border" data-bs-toggle="dropdown" id="notif-btn" onclick="cargarNotificaciones()">
+    <i class="bi bi-bell fs-5"></i>
+    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notif-badge" style="display:none; font-size:.65rem;"></span>
   </button>
+  <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0" style="width:340px; border-radius:12px; overflow:hidden;">
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom bg-light">
+      <span class="fw-bold" style="font-size:.875rem;">Notificaciones</span>
+      <form method="POST" action="{% url 'marcar_notificaciones_leidas' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button type="submit" class="btn btn-link btn-sm p-0 text-muted" style="font-size:.78rem;">Marcar todas leídas</button>
+      </form>
+    </div>
+    <div id="notif-lista" style="max-height:320px; overflow-y:auto;">
+      <p class="text-muted text-center py-4 mb-0" style="font-size:.85rem;">Cargando…</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  let notifCargadas = false;
+  async function cargarNotificaciones() {
+    if (notifCargadas) return;
+    try {
+      const res  = await fetch("{% url 'api_notificaciones' %}");
+      const data = await res.json();
+      const lista = document.getElementById('notif-lista');
+      const badge = document.getElementById('notif-badge');
+      if (data.count > 0) { badge.textContent = data.count > 9 ? '9+' : data.count; badge.style.display = ''; }
+      lista.innerHTML = data.notificaciones.length === 0
+        ? '<p class="text-muted text-center py-4 mb-0" style="font-size:.85rem;">Sin notificaciones nuevas</p>'
+        : data.notificaciones.map(n => `
+            <a href="${n.url||'#'}" class="d-flex align-items-start gap-2 px-3 py-2 border-bottom text-decoration-none text-dark" style="font-size:.82rem;">
+              <i class="bi bi-bell-fill text-primary mt-1 flex-shrink-0" style="font-size:.8rem;"></i>
+              <div><p class="mb-0" style="line-height:1.35;">${n.mensaje}</p><small class="text-muted">${n.remitente} · ${n.creada_en}</small></div>
+            </a>`).join('');
+      notifCargadas = true;
+    } catch(e) {}
+  }
+  window.addEventListener('DOMContentLoaded', async () => {
+    try {
+      const res = await fetch("{% url 'api_notificaciones' %}");
+      const data = await res.json();
+      if (data.count > 0) { const b = document.getElementById('notif-badge'); b.textContent = data.count > 9 ? '9+' : data.count; b.style.display = ''; }
+    } catch(e) {}
+  });
+</script>
   {% if request.user.is_authenticated %}
   <div class="topbar-user">
     <div class="avatar">

@@ -3,61 +3,85 @@
 {% block topbar_titulo %}Tareas{% endblock %}
 
 {% block contenido %}
-
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h5 class="fw-bold mb-0">{% if editando %}Editar tarea{% else %}Asignar nueva tarea{% endif %}</h5>
-    <a href="{% url 'lista_tareas' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i> Volver
-    </a>
+  <h5 class="fw-bold mb-0">{% if editando %}Editar tarea{% else %}Asignar nueva tarea{% endif %}</h5>
+  <a href="{% url 'lista_tareas' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Volver</a>
 </div>
 
 <div class="card border-0 shadow-sm" style="border-radius:12px;">
-    <div class="card-body p-4">
-        <form method="POST">
-            {% csrf_token %}
-            <div class="row g-3">
-                <div class="col-12">
-                    <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Título de la tarea</label>
-                    {{ form.titulo }}
-                    {% if form.titulo.errors %}<div class="text-danger mt-1" style="font-size:.8rem;">{{ form.titulo.errors }}</div>{% endif %}
-                </div>
-                <div class="col-12">
-                    <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Descripción</label>
-                    {{ form.descripcion }}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Expediente relacionado</label>
-                    {{ form.expediente }}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Asignar a</label>
-                    {{ form.asignada_a }}
-                    {% if form.asignada_a.errors %}<div class="text-danger mt-1" style="font-size:.8rem;">{{ form.asignada_a.errors }}</div>{% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Prioridad</label>
-                    {{ form.prioridad }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Estado</label>
-                    {{ form.estado }}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Fecha límite</label>
-                    {{ form.fecha_limite }}
-                    {% if form.fecha_limite.errors %}<div class="text-danger mt-1" style="font-size:.8rem;">{{ form.fecha_limite.errors }}</div>{% endif %}
-                </div>
-            </div>
-            <hr class="my-4">
-            <div class="d-flex justify-content-end gap-2">
-                <a href="{% url 'lista_tareas' %}" class="btn btn-outline-secondary px-4">Cancelar</a>
-                <button type="submit" class="btn btn-primary px-4">
-                    <i class="bi bi-save me-1"></i>
-                    {% if editando %}Guardar cambios{% else %}Asignar tarea{% endif %}
-                </button>
-            </div>
-        </form>
-    </div>
+  <div class="card-body p-4">
+    <form method="POST">
+      {% csrf_token %}
+      <div class="row g-3">
+
+        <div class="col-12">
+          <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Título *</label>
+          {{ form.titulo }}
+          {% if form.titulo.errors %}<div class="text-danger mt-1" style="font-size:.8rem;">{{ form.titulo.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Descripción *</label>
+          {{ form.descripcion }}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Expediente relacionado</label>
+          {{ form.expediente }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Asignar a *</label>
+          {{ form.asignada_a }}
+          {% if form.asignada_a.errors %}<div class="text-danger mt-1" style="font-size:.8rem;">{{ form.asignada_a.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Prioridad</label>
+          {{ form.prioridad }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Estado</label>
+          {{ form.estado }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Fecha límite *</label>
+          {{ form.fecha_limite }}
+          {% if form.fecha_limite.errors %}<div class="text-danger mt-1" style="font-size:.8rem;">{{ form.fecha_limite.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;"><i class="bi bi-clock me-1"></i>Horas estimadas</label>
+          {{ form.horas_estimadas }}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold text-secondary d-block" style="font-size:.85rem;"><i class="bi bi-arrow-repeat me-1"></i>¿Recurrente?</label>
+          <div class="form-check mt-2">
+            {{ form.es_recurrente }}
+            <label class="form-check-label" for="{{ form.es_recurrente.id_for_label }}">Repetir automáticamente</label>
+          </div>
+        </div>
+
+        <div class="col-md-4" id="frecuencia-wrapper" style="{% if not form.instance.es_recurrente %}display:none;{% endif %}">
+          <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Frecuencia</label>
+          {{ form.frecuencia_recurrencia }}
+        </div>
+
+      </div>
+      <hr class="my-4">
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'lista_tareas' %}" class="btn btn-outline-secondary px-4">Cancelar</a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-save me-1"></i> {% if editando %}Guardar cambios{% else %}Asignar tarea{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
+<script>
+  const chk = document.getElementById('{{ form.es_recurrente.id_for_label }}');
+  const wrapper = document.getElementById('frecuencia-wrapper');
+  if (chk) chk.addEventListener('change', () => { wrapper.style.display = chk.checked ? '' : 'none'; });
+</script>
 {% endblock %}

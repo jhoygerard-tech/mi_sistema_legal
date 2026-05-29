@@ -273,6 +273,15 @@ class Tarea(models.Model):
         (ESTADO_COMPLETADA, 'Completada'),
     ]
 
+    FRECUENCIA_SEMANAL   = 'semanal'
+    FRECUENCIA_QUINCENAL = 'quincenal'
+    FRECUENCIA_MENSUAL   = 'mensual'
+    FRECUENCIAS = [
+        (FRECUENCIA_SEMANAL,   'Semanal'),
+        (FRECUENCIA_QUINCENAL, 'Quincenal'),
+        (FRECUENCIA_MENSUAL,   'Mensual'),
+    ]
+
     expediente   = models.ForeignKey(
         Expediente, on_delete=models.CASCADE,
         related_name='tareas', null=True, blank=True,
@@ -288,13 +297,16 @@ class Tarea(models.Model):
         related_name='tareas_creadas',
         verbose_name="Creada por"
     )
-    titulo       = models.CharField(max_length=200, verbose_name="Título de la tarea")
-    descripcion  = models.TextField(verbose_name="Descripción")
-    prioridad    = models.CharField(max_length=10, choices=PRIORIDADES, default=PRIORIDAD_MEDIA)
-    estado       = models.CharField(max_length=20, choices=ESTADOS, default=ESTADO_PENDIENTE)
-    fecha_limite = models.DateField(verbose_name="Fecha límite")
-    fecha_completada = models.DateTimeField(null=True, blank=True)
-    creada_en    = models.DateTimeField(auto_now_add=True)
+    titulo            = models.CharField(max_length=200, verbose_name="Título de la tarea")
+    descripcion       = models.TextField(verbose_name="Descripción")
+    prioridad         = models.CharField(max_length=10, choices=PRIORIDADES, default=PRIORIDAD_MEDIA)
+    estado            = models.CharField(max_length=20, choices=ESTADOS, default=ESTADO_PENDIENTE)
+    fecha_limite      = models.DateField(verbose_name="Fecha límite")
+    fecha_completada  = models.DateTimeField(null=True, blank=True)
+    creada_en         = models.DateTimeField(auto_now_add=True)
+    horas_estimadas   = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name="Horas estimadas")
+    es_recurrente     = models.BooleanField(default=False, verbose_name="¿Tarea recurrente?")
+    frecuencia_recurrencia = models.CharField(max_length=20, blank=True, choices=FRECUENCIAS, verbose_name="Frecuencia de recurrencia")
 
     class Meta:
         ordering = ['fecha_limite', '-prioridad']
@@ -308,6 +320,37 @@ class Tarea(models.Model):
         from django.utils import timezone
         return self.fecha_limite < timezone.now().date() and self.estado != self.ESTADO_COMPLETADA
 
+    def horas_reales(self):
+        if self.fecha_completada and self.creada_en:
+            delta = self.fecha_completada - self.creada_en
+            return round(delta.total_seconds() / 3600, 1)
+        return None
+
+    def generar_siguiente_recurrente(self):
+        if not self.es_recurrente or not self.frecuencia_recurrencia:
+            return None
+        from datetime import timedelta
+        nueva_fecha = self.fecha_limite
+        if self.frecuencia_recurrencia == self.FRECUENCIA_SEMANAL:
+            nueva_fecha = self.fecha_limite + timedelta(weeks=1)
+        elif self.frecuencia_recurrencia == self.FRECUENCIA_QUINCENAL:
+            nueva_fecha = self.fecha_limite + timedelta(weeks=2)
+        elif self.frecuencia_recurrencia == self.FRECUENCIA_MENSUAL:
+            from dateutil.relativedelta import relativedelta
+            nueva_fecha = self.fecha_limite + relativedelta(months=1)
+        return Tarea.objects.create(
+            expediente=self.expediente,
+            asignada_a=self.asignada_a,
+            creada_por=self.creada_por,
+            titulo=self.titulo,
+            descripcion=self.descripcion,
+            prioridad=self.prioridad,
+            estado=self.ESTADO_PENDIENTE,
+            fecha_limite=nueva_fecha,
+            horas_estimadas=self.horas_estimadas,
+            es_recurrente=True,
+            frecuencia_recurrencia=self.frecuencia_recurrencia,
+        )
 
 # ══════════════════════════════════════════════
 # 7. EVIDENCIA DE TAREA
@@ -337,6 +380,42 @@ class EvidenciaTarea(models.Model):
     def __str__(self):
         return f"Evidencia de: {self.tarea.titulo}"
 
+# ══════════════════════════════════════════════
+# 8. COMENTARIO DE TAREA
+# ══════════════════════════════════════════════
+class ComentarioTarea(models.Model):
+    tarea     = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name='comentarios', verbose_name="Tarea")
+    autor     = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='comentarios_tareas', verbose_name="Autor")
+    texto     = models.TextField(verbose_name="Comentario")
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['creado_en']
+        verbose_name = "Comentario de tarea"
+        verbose_name_plural = "Comentarios de tareas"
+
+    def __str__(self):
+        return f"Comentario de {self.autor} en '{self.tarea.titulo}'"
+
+
+# ══════════════════════════════════════════════
+# 9. NOTIFICACIÓN INTERNA
+# ══════════════════════════════════════════════
+class NotificacionInterna(models.Model):
+    destinatario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notificaciones', verbose_name="Destinatario")
+    remitente    = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='notificaciones_enviadas', verbose_name="Remitente")
+    mensaje      = models.CharField(max_length=300, verbose_name="Mensaje")
+    url_destino  = models.CharField(max_length=200, blank=True)
+    leida        = models.BooleanField(default=False, verbose_name="Leída")
+    creada_en    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creada_en']
+        verbose_name = "Notificación interna"
+        verbose_name_plural = "Notificaciones internas"
+
+    def __str__(self):
+        return f"Notif → {self.destinatario}: {self.mensaje[:50]}"
 
 # ══════════════════════════════════════════════
 # 8. PLANTILLA DE CONTRATO

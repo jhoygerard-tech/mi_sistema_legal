@@ -4,102 +4,182 @@
 
 {% block contenido %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h5 class="fw-bold mb-0">Tareas asignadas</h5>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h5 class="fw-bold mb-0">Tareas asignadas</h5>
+  <div class="d-flex gap-2 flex-wrap">
+    <div class="btn-group btn-group-sm">
+      <button type="button" class="btn btn-outline-secondary active" id="btn-tabla" onclick="setVista('tabla')">
+        <i class="bi bi-list-ul"></i> Lista
+      </button>
+      <button type="button" class="btn btn-outline-secondary" id="btn-kanban" onclick="setVista('kanban')">
+        <i class="bi bi-kanban"></i> Kanban
+      </button>
+    </div>
     {% if request.user.perfil.rol != 'pasante' %}
     <a href="{% url 'crear_tarea' %}" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-lg me-1"></i> Nueva tarea
+      <i class="bi bi-plus-lg me-1"></i> Nueva tarea
     </a>
     {% endif %}
+  </div>
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius:12px;">
+<form method="GET" class="row g-2 mb-3">
+  <div class="col-auto">
+    <select name="estado" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">Todos los estados</option>
+      <option value="pendiente"  {% if estado_f == 'pendiente' %}selected{% endif %}>Pendiente</option>
+      <option value="en_proceso" {% if estado_f == 'en_proceso' %}selected{% endif %}>En proceso</option>
+      <option value="completada" {% if estado_f == 'completada' %}selected{% endif %}>Completada</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="prioridad" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">Todas las prioridades</option>
+      <option value="alta"  {% if prioridad_f == 'alta' %}selected{% endif %}>Alta</option>
+      <option value="media" {% if prioridad_f == 'media' %}selected{% endif %}>Media</option>
+      <option value="baja"  {% if prioridad_f == 'baja' %}selected{% endif %}>Baja</option>
+    </select>
+  </div>
+  {% if estado_f or prioridad_f %}
+  <div class="col-auto">
+    <a href="{% url 'lista_tareas' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i> Limpiar</a>
+  </div>
+  {% endif %}
+</form>
+
+{# VISTA TABLA #}
+<div id="vista-tabla">
+  <div class="card border-0 shadow-sm" style="border-radius:12px;">
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" style="font-size:.875rem;">
-            <thead class="table-light">
-                <tr>
-                    <th class="ps-4">Tarea</th>
-                    <th>Expediente</th>
-                    <th>Asignada a</th>
-                    <th>Prioridad</th>
-                    <th>Vence</th>
-                    <th>Estado</th>
-                    <th class="text-center">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for tarea in tareas %}
-                <tr>
-                    <td class="ps-4">
-                        <a href="{% url 'detalle_tarea' tarea.pk %}" class="fw-semibold text-decoration-none text-dark">
-                            {{ tarea.titulo }}
-                        </a>
-                        <small class="d-block text-muted">{{ tarea.descripcion|truncatechars:40 }}</small>
-                    </td>
-                    <td>
-                        {% if tarea.expediente %}
-                        <span class="text-primary">{{ tarea.expediente.cliente.nombre_completo }}</span>
-                        <small class="d-block text-muted">{{ tarea.expediente.nurej }}</small>
-                        {% else %}<span class="text-muted">—</span>{% endif %}
-                    </td>
-                    <td>{{ tarea.asignada_a.get_full_name|default:tarea.asignada_a.username }}</td>
-                    <td>
-                        {% if tarea.prioridad == 'alta' %}
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2">Alta</span>
-                        {% elif tarea.prioridad == 'media' %}
-                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2">Media</span>
-                        {% else %}
-                            <span class="badge bg-secondary-subtle text-secondary px-2">Baja</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="{% if tarea.esta_vencida %}text-danger fw-bold{% endif %}">
-                            {{ tarea.fecha_limite|date:"d/m/Y" }}
-                            {% if tarea.esta_vencida %}<i class="bi bi-exclamation-circle ms-1"></i>{% endif %}
-                        </span>
-                    </td>
-                    <td>
-                        <form method="POST" action="{% url 'cambiar_estado_tarea' tarea.pk %}">
-                            {% csrf_token %}
-                            <select name="estado" class="form-select form-select-sm"
-                                    style="width:130px;" onchange="this.form.submit()">
-                                {% for val, label in tarea.ESTADOS %}
-                                <option value="{{ val }}" {% if tarea.estado == val %}selected{% endif %}>
-                                    {{ label }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </form>
-                    </td>
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <a href="{% url 'detalle_tarea' tarea.pk %}" class="btn btn-light border text-info" title="Ver evidencias">
-                                <i class="bi bi-paperclip"></i>
-                            </a>
-                            {% if request.user.perfil.rol != 'pasante' %}
-                            <a href="{% url 'editar_tarea' tarea.pk %}" class="btn btn-light border text-warning" title="Editar">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center text-muted py-5">
-                        <i class="bi bi-check2-square fs-1 d-block mb-2 opacity-25"></i>
-                        No hay tareas asignadas.
-                        {% if request.user.perfil.rol != 'pasante' %}
-                        <div class="mt-2">
-                            <a href="{% url 'crear_tarea' %}" class="btn btn-sm btn-primary">Crear la primera</a>
-                        </div>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+      <table class="table table-hover align-middle mb-0" style="font-size:.875rem;">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">Tarea</th>
+            <th>Expediente</th>
+            <th>Asignada a</th>
+            <th>Prioridad</th>
+            <th>Vence</th>
+            <th>Tiempo est.</th>
+            <th>Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tarea in tareas %}
+          <tr>
+            <td class="ps-4">
+              <a href="{% url 'detalle_tarea' tarea.pk %}" class="fw-semibold text-decoration-none text-dark">
+                {{ tarea.titulo }}
+                {% if tarea.es_recurrente %}<i class="bi bi-arrow-repeat text-info ms-1" title="Recurrente"></i>{% endif %}
+              </a>
+              <small class="d-block text-muted">{{ tarea.descripcion|truncatechars:40 }}</small>
+            </td>
+            <td>
+              {% if tarea.expediente %}
+                <span class="text-primary">{{ tarea.expediente.cliente.nombre_completo }}</span>
+                <small class="d-block text-muted">{{ tarea.expediente.nurej }}</small>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td>{{ tarea.asignada_a.get_full_name|default:tarea.asignada_a.username }}</td>
+            <td>
+              {% if tarea.prioridad == 'alta' %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2">Alta</span>
+              {% elif tarea.prioridad == 'media' %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2">Media</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary px-2">Baja</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="{% if tarea.esta_vencida %}text-danger fw-bold{% endif %}">
+                {{ tarea.fecha_limite|date:"d/m/Y" }}
+                {% if tarea.esta_vencida %}<i class="bi bi-exclamation-circle ms-1"></i>{% endif %}
+              </span>
+            </td>
+            <td>
+              <small class="text-muted">
+                {% if tarea.horas_estimadas %}<i class="bi bi-clock me-1"></i>{{ tarea.horas_estimadas }}h{% else %}—{% endif %}
+              </small>
+            </td>
+            <td>
+              {% if request.user.perfil.rol != 'pasante' or request.user == tarea.asignada_a %}
+              <form method="POST" action="{% url 'cambiar_estado_tarea' tarea.pk %}">
+                {% csrf_token %}
+                <select name="estado" class="form-select form-select-sm" style="width:130px;" onchange="this.form.submit()">
+                  {% for val, label in tarea.ESTADOS %}
+                  <option value="{{ val }}" {% if tarea.estado == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+              {% else %}
+                <span class="badge bg-light text-secondary border">{{ tarea.get_estado_display }}</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'detalle_tarea' tarea.pk %}" class="btn btn-light border text-info" title="Ver"><i class="bi bi-eye"></i></a>
+                {% if request.user.perfil.rol != 'pasante' %}
+                <a href="{% url 'editar_tarea' tarea.pk %}" class="btn btn-light border text-warning" title="Editar"><i class="bi bi-pencil"></i></a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-5">
+              <i class="bi bi-check2-square fs-1 d-block mb-2 opacity-25"></i>
+              No hay tareas{% if estado_f or prioridad_f %} con esos filtros{% endif %}.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 </div>
+
+{# VISTA KANBAN #}
+<div id="vista-kanban" style="display:none;">
+  <div class="row g-3">
+    {% for col_estado, col_label, col_color in kanban_cols %}
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm" style="border-radius:12px; border-top:4px solid {{ col_color }} !important;">
+        <div class="card-header bg-white border-0 pt-3 pb-2 px-3">
+          <span class="fw-bold" style="color:{{ col_color }}; font-size:.9rem;">{{ col_label }}</span>
+        </div>
+        <div class="card-body px-3 pb-3" style="min-height:200px;">
+          {% for tarea in tareas %}{% if tarea.estado == col_estado %}
+          <div class="card mb-2 border-0 shadow-sm" style="border-radius:8px; border-left:3px solid {% if tarea.prioridad == 'alta' %}#dc3545{% elif tarea.prioridad == 'media' %}#ffc107{% else %}#6c757d{% endif %} !important;">
+            <div class="card-body p-3">
+              <a href="{% url 'detalle_tarea' tarea.pk %}" class="text-decoration-none text-dark fw-semibold d-block" style="font-size:.875rem;">
+                {{ tarea.titulo }}{% if tarea.es_recurrente %} <i class="bi bi-arrow-repeat text-info"></i>{% endif %}
+              </a>
+              <small class="text-muted d-block mt-1"><i class="bi bi-person me-1"></i>{{ tarea.asignada_a.get_full_name|default:tarea.asignada_a.username }}</small>
+              <div class="d-flex justify-content-between mt-2">
+                <small class="{% if tarea.esta_vencida %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                  <i class="bi bi-calendar3 me-1"></i>{{ tarea.fecha_limite|date:"d/m/Y" }}
+                </small>
+                {% if tarea.horas_estimadas %}<small class="text-muted"><i class="bi bi-clock me-1"></i>{{ tarea.horas_estimadas }}h</small>{% endif %}
+              </div>
+            </div>
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  function setVista(v) {
+    localStorage.setItem('tareas_vista', v);
+    document.getElementById('vista-tabla').style.display  = v === 'tabla'  ? '' : 'none';
+    document.getElementById('vista-kanban').style.display = v === 'kanban' ? '' : 'none';
+    document.getElementById('btn-tabla').classList.toggle('active',  v === 'tabla');
+    document.getElementById('btn-kanban').classList.toggle('active', v === 'kanban');
+  }
+  (function(){ setVista(localStorage.getItem('tareas_vista') || 'tabla'); })();
+</script>
 
 {% endblock %}

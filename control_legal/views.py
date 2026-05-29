@@ -12,10 +12,10 @@ from django.db.models import Q
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template
+from django.utils import timezone 
 
-from .forms import (CasoForm, ClienteForm, ExpedienteForm, DocumentoForm, MovimientoForm, EventoForm, TareaForm, EvidenciaForm, PlantillaContratoForm, GenerarContratoForm)
-from .models import Cliente, Expediente, Documento, Movimiento, Evento, Tarea, EvidenciaTarea, PlantillaContrato, Contrato, PlantillaMemorial, Memorial, PrecedenteJurisprudencial
-
+from .forms import (CasoForm, ClienteForm, ExpedienteForm, DocumentoForm, MovimientoForm, EventoForm, TareaForm, EvidenciaForm, PlantillaContratoForm, GenerarContratoForm, ComentarioTareaForm)
+from .models import Cliente, Expediente, Documento, Movimiento, Evento, Tarea, EvidenciaTarea, PlantillaContrato, Contrato, PlantillaMemorial, Memorial, PrecedenteJurisprudencial, ComentarioTarea, NotificacionInterna 
 @login_required
 def dashboard(request):
     from django.utils import timezone
@@ -243,6 +243,7 @@ def detalle_caso(request, pk):
         'movimientos': expediente.movimientos.all(),
         'doc_form':   doc_form,
         'mov_form':   mov_form,
+        'tareas_del_caso': expediente.tareas.select_related('asignada_a').order_by('fecha_limite'),
     })
 
 
@@ -370,31 +371,63 @@ def eliminar_evento(request, pk):
     messages.success(request, 'Evento eliminado.')
     return redirect('agenda')
 
+# ── Helper notificaciones ─────────────────────────────────────
+def _notificar(destinatario, remitente, mensaje, url=''):
+    if destinatario and destinatario != remitente:
+        NotificacionInterna.objects.create(
+            destinatario=destinatario,
+            remitente=remitente,
+            mensaje=mensaje,
+            url_destino=url,
+        )
+
+
 # ── Tareas: lista ─────────────────────────────────────────────
 @login_required
 def lista_tareas(request):
-    from django.utils import timezone
     user = request.user
     if hasattr(user, 'perfil') and user.perfil.es_pasante():
         tareas = Tarea.objects.filter(asignada_a=user)
     else:
         tareas = Tarea.objects.all()
 
+    estado_f    = request.GET.get('estado', '')
+    prioridad_f = request.GET.get('prioridad', '')
+    if estado_f:
+        tareas = tareas.filter(estado=estado_f)
+    if prioridad_f:
+        tareas = tareas.filter(prioridad=prioridad_f)
+
     tareas = tareas.select_related('asignada_a', 'expediente__cliente').order_by('fecha_limite')
     return render(request, 'control_legal/lista_tareas.html', {
-        'tareas': tareas,
-        'hoy':    timezone.now().date(),
+        'tareas':      tareas,
+        'hoy':         timezone.now().date(),
+        'estado_f':    estado_f,
+        'prioridad_f': prioridad_f,
+        'kanban_cols': [
+            ('pendiente',  'Pendiente',  '#6c757d'),
+            ('en_proceso', 'En proceso', '#0d6efd'),
+            ('completada', 'Completada', '#198754'),
+        ],
     })
 
 
 # ── Tareas: crear ─────────────────────────────────────────────
 @login_required
 def crear_tarea(request):
+    if hasattr(request.user, 'perfil') and request.user.perfil.es_pasante():
+        messages.error(request, 'No tienes permiso para crear tareas.')
+        return redirect('lista_tareas')
     form = TareaForm(request.POST or None)
     if form.is_valid():
         tarea            = form.save(commit=False)
         tarea.creada_por = request.user
         tarea.save()
+        _notificar(
+            tarea.asignada_a, request.user,
+            f'Se te asignó la tarea "{tarea.titulo}" — vence {tarea.fecha_limite.strftime("%d/%m/%Y")}',
+            f'/tareas/{tarea.pk}/',
+        )
         messages.success(request, 'Tarea asignada correctamente.')
         return redirect('lista_tareas')
     return render(request, 'control_legal/registrar_tarea.html', {'form': form})
@@ -404,7 +437,10 @@ def crear_tarea(request):
 @login_required
 def editar_tarea(request, pk):
     tarea = get_object_or_404(Tarea, pk=pk)
-    form  = TareaForm(request.POST or None, instance=tarea)
+    if hasattr(request.user, 'perfil') and request.user.perfil.es_pasante():
+        messages.error(request, 'No tienes permiso para editar tareas.')
+        return redirect('lista_tareas')
+    form = TareaForm(request.POST or None, instance=tarea)
     if form.is_valid():
         form.save()
         messages.success(request, 'Tarea actualizada.')
@@ -414,41 +450,112 @@ def editar_tarea(request, pk):
     })
 
 
-# ── Tareas: detalle + subir evidencia ─────────────────────────
+# ── Tareas: detalle + evidencia + comentarios ─────────────────
 @login_required
 def detalle_tarea(request, pk):
-    tarea = get_object_or_404(Tarea, pk=pk)
-    form  = EvidenciaForm(request.POST or None, request.FILES or None)
-    if form.is_valid():
-        ev            = form.save(commit=False)
-        ev.tarea      = tarea
-        ev.subida_por = request.user
-        ev.save()
-        if tarea.estado == Tarea.ESTADO_PENDIENTE:
-            tarea.estado = Tarea.ESTADO_EN_PROCESO
-            tarea.save()
-        messages.success(request, 'Evidencia subida correctamente.')
-        return redirect('detalle_tarea', pk=pk)
+    tarea    = get_object_or_404(Tarea, pk=pk)
+    ev_form  = EvidenciaForm(None, None)
+    com_form = ComentarioTareaForm()
+
+    if request.method == 'POST':
+        if 'subir_evidencia' in request.POST:
+            ev_form = EvidenciaForm(request.POST, request.FILES)
+            if ev_form.is_valid():
+                ev            = ev_form.save(commit=False)
+                ev.tarea      = tarea
+                ev.subida_por = request.user
+                ev.save()
+                if tarea.estado == Tarea.ESTADO_PENDIENTE:
+                    tarea.estado = Tarea.ESTADO_EN_PROCESO
+                    tarea.save()
+                if tarea.creada_por:
+                    _notificar(
+                        tarea.creada_por, request.user,
+                        f'{request.user.get_full_name() or request.user.username} subió evidencia en "{tarea.titulo}"',
+                        f'/tareas/{pk}/',
+                    )
+                messages.success(request, 'Evidencia subida correctamente.')
+                return redirect('detalle_tarea', pk=pk)
+
+        elif 'agregar_comentario' in request.POST:
+            com_form = ComentarioTareaForm(request.POST)
+            if com_form.is_valid():
+                com       = com_form.save(commit=False)
+                com.tarea = tarea
+                com.autor = request.user
+                com.save()
+                receptor = tarea.creada_por if request.user == tarea.asignada_a else tarea.asignada_a
+                _notificar(receptor, request.user, f'Nuevo comentario en "{tarea.titulo}"', f'/tareas/{pk}/')
+                messages.success(request, 'Comentario agregado.')
+                return redirect('detalle_tarea', pk=pk)
+
+    puede_completar = not (hasattr(request.user, 'perfil') and request.user.perfil.es_pasante()) \
+                      or request.user == tarea.asignada_a
+
     return render(request, 'control_legal/detalle_tarea.html', {
-        'tarea':     tarea,
-        'evidencias': tarea.evidencias.all(),
-        'form':      form,
+        'tarea':          tarea,
+        'evidencias':     tarea.evidencias.all(),
+        'comentarios':    tarea.comentarios.select_related('autor').all(),
+        'ev_form':        ev_form,
+        'com_form':       com_form,
+        'puede_completar': puede_completar,
     })
 
-# ── Tareas: cambiar estado rápido ─────────────────────────────
+
+# ── Tareas: cambiar estado ────────────────────────────────────
 @login_required
 def cambiar_estado_tarea(request, pk):
-    from django.utils import timezone
     tarea        = get_object_or_404(Tarea, pk=pk)
     nuevo_estado = request.POST.get('estado')
+    es_pasante   = hasattr(request.user, 'perfil') and request.user.perfil.es_pasante()
+
+    if es_pasante and nuevo_estado == Tarea.ESTADO_COMPLETADA:
+        messages.error(request, 'Solo el abogado responsable puede marcar la tarea como completada.')
+        return redirect('lista_tareas')
+
     if nuevo_estado in dict(Tarea.ESTADOS):
         tarea.estado = nuevo_estado
         if nuevo_estado == Tarea.ESTADO_COMPLETADA:
             tarea.fecha_completada = timezone.now()
+            if tarea.es_recurrente:
+                nueva = tarea.generar_siguiente_recurrente()
+                if nueva:
+                    messages.info(request, f'Tarea recurrente: nueva instancia creada con vencimiento {nueva.fecha_limite.strftime("%d/%m/%Y")}.')
+            if tarea.creada_por:
+                _notificar(
+                    tarea.creada_por, request.user,
+                    f'"{tarea.titulo}" fue completada por {request.user.get_full_name() or request.user.username}',
+                    f'/tareas/{pk}/',
+                )
         tarea.save()
         messages.success(request, f'Tarea marcada como {tarea.get_estado_display()}.')
     return redirect('lista_tareas')
 
+
+# ── Notificaciones: marcar leídas ─────────────────────────────
+@login_required
+def marcar_notificaciones_leidas(request):
+    NotificacionInterna.objects.filter(destinatario=request.user, leida=False).update(leida=True)
+    return redirect(request.POST.get('next', 'dashboard'))
+
+
+# ── Notificaciones: API JSON ──────────────────────────────────
+@login_required
+def api_notificaciones(request):
+    qs = NotificacionInterna.objects.filter(
+        destinatario=request.user, leida=False
+    ).order_by('-creada_en')[:10]
+    data = [
+        {
+            'id':        n.pk,
+            'mensaje':   n.mensaje,
+            'url':       n.url_destino,
+            'creada_en': n.creada_en.strftime('%d/%m %H:%M'),
+            'remitente': n.remitente.get_full_name() if n.remitente else '—',
+        }
+        for n in qs
+    ]
+    return JsonResponse({'count': len(data), 'notificaciones': data})
 
 # ── Contratos: lista ──────────────────────────────────────────
 @login_required

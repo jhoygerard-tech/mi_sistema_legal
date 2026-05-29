@@ -38,6 +38,9 @@ urlpatterns = [
     path('tareas/<int:pk>/',          views.detalle_tarea,        name='detalle_tarea'),
     path('tareas/<int:pk>/editar/',   views.editar_tarea,         name='editar_tarea'),
     path('tareas/<int:pk>/estado/',   views.cambiar_estado_tarea, name='cambiar_estado_tarea'),
+    # Notificaciones
+    path('notificaciones/leer/',  views.marcar_notificaciones_leidas, name='marcar_notificaciones_leidas'),
+    path('api/notificaciones/',   views.api_notificaciones,           name='api_notificaciones'),
 
     # Contratos
     # CORRECCIÓN: 'contratos/ia/' debe ir ANTES de 'contratos/<int:pk>/'
