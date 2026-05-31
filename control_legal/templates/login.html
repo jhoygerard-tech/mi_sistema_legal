@@ -1,120 +1,285 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Jurídico - Ingreso</title>
-    <!-- Bootstrap 5 -->
+    <title>LexNova — Ingreso</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    
     <style>
+        *, *::before, *::after { box-sizing: border-box; }
         body, html {
             height: 100%;
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
         }
 
-        /* Fondo con imagen y overlay oscuro como en 1000054027_3.png */
-        .bg-image {
-            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
-                              url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
-            background-size: cover;
-            background-position: center;
-            height: 100%;
+        /* ── Contenedor principal ── */
+        .login-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
-        .login-container {
+        /* ── Video de fondo ── */
+        .video-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            z-index: 0;
+        }
+
+        /* MODIFICACIÓN 1: Bajamos la opacidad del overlay para que resalten los colores neón */
+        .video-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                135deg,
+                rgba(10, 18, 40, 0.3) 0%,   /* Cambiado de 0.72 a 0.3 */
+                rgba(20, 40, 90, 0.2) 100%   /* Cambiado de 0.58 a 0.2 */
+            );
+            z-index: 1;
+        }
+
+        /* ── Todo el contenido va sobre el video ── */
+        .login-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* ── Header con logo ── */
+        .brand-header {
+            padding: 22px 36px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-header .brand-icon {
+            font-size: 2rem;
+            opacity: .9;
+        }
+        .brand-header .brand-name {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+        .brand-header .brand-sub {
+            font-size: .7rem;
+            opacity: .65;
+            letter-spacing: 1px;
+        }
+
+        /* ── Formulario centrado ── */
+        .login-center {
             flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
 
+        /* MODIFICACIÓN 2: Quitamos la animación automática por defecto y lo dejamos oculto */
         .login-card {
             width: 100%;
             max-width: 400px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
-            padding: 40px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 16px;
+            padding: 42px 40px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
             text-align: center;
+            
+            /* Nuevas propiedades para que inicie invisible */
+            opacity: 0;
+            transform: translateY(24px);
+            pointer-events: none;
+            transition: opacity .8s ease, transform .8s ease;
         }
 
+        /* NUEVA CLASE: Esta se activará mediante JavaScript cuando acabe el video */
+        .login-card.mostrar-login {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .login-card .logo-icon {
+            font-size: 2.6rem;
+            color: #1a2744;
+        }
         .login-card h2 {
-            color: #333;
-            font-weight: 300;
-            margin-bottom: 30px;
-            font-size: 2rem;
+            color: #1a2744;
+            font-weight: 800;
+            font-size: 1.55rem;
+            letter-spacing: 2px;
+            margin: 10px 0 3px;
+        }
+        .login-card .subtitulo {
+            color: #6c757d;
+            font-size: .8rem;
+            margin-bottom: 26px;
+            letter-spacing: .5px;
         }
 
         .form-control {
-            border-radius: 5px;
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 11px 14px;
+            margin-bottom: 12px;
+            border: 1px solid #dde2ec;
+            font-size: .9rem;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .form-control:focus {
+            border-color: #2d4a8a;
+            box-shadow: 0 0 0 3px rgba(45,74,138,.13);
+            outline: none;
         }
 
         .btn-login {
-            background-color: #2c3e50; /* El azul oscuro del modelo */
+            background: linear-gradient(135deg, #1a2744 0%, #2d4a8a 100%);
             color: white;
             padding: 12px;
             width: 100%;
             border: none;
-            border-radius: 5px;
-            font-size: 1.1rem;
-            transition: background 0.3s;
+            border-radius: 8px;
+            font-size: .95rem;
+            font-weight: 600;
+            letter-spacing: .5px;
+            cursor: pointer;
+            transition: opacity .2s, transform .15s, box-shadow .2s;
+            margin-top: 4px;
         }
-
         .btn-login:hover {
-            background-color: #1a252f;
+            opacity: .92;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26,39,68,.35);
             color: white;
         }
+        .btn-login:active {
+            transform: translateY(0);
+        }
 
-        .brand-header {
-            padding: 20px 40px;
-            color: white;
-            display: flex;
-            align-items: center;
+        .link-recuperar {
+            color: #2d4a8a;
+            font-size: .8rem;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 14px;
+            opacity: .85;
+            transition: opacity .15s;
+        }
+        .link-recuperar:hover { opacity: 1; text-decoration: underline; }
+
+        /* ── Footer ── */
+        .footer-login {
+            padding: 14px;
+            text-align: center;
+            color: rgba(255,255,255,.45);
+            font-size: .72rem;
+            letter-spacing: .5px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 480px) {
+            .login-card { padding: 32px 24px; }
+            .brand-header { padding: 16px 20px; }
         }
     </style>
 </head>
 <body>
 
-<div class="bg-image">
-    <!-- Encabezado superior del modelo -->
-    <div class="brand-header">
-        <i class="bi bi-bank2 fs-1 me-3"></i>
-        <h3 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 2px;">Consultorio Jurídico Popular</h3>
-    </div>
+<div class="login-wrapper">
 
-    <div class="login-container">
-        <div class="login-card">
-            <h2>Sistema Jurídico</h2>
-            
-            {% if messages %}
-            {% for message in messages %}
-            <div class="alert alert-danger small py-2">{{ message }}</div>
-            {% endfor %}
-            {% endif %} 
-    
-            <form method="post">
-                {% csrf_token %}
-                <input type="text" name="username" class="form-control" placeholder="Usuario" required>
-                <input type="password" name="password" class="form-control" placeholder="Contraseña" required>
-                
-                <button type="submit" class="btn-login mt-2">Ingresar</button>
-            </form>
+    <video id="fondo-video"
+           class="video-bg"
+           autoplay
+           muted
+           playsinline
+           preload="auto"
+           poster="{% static 'img/login_bg.png' %}">
+        <source src="{% static 'video/lv_0_20260530183251.mp4' %}" type="video/mp4">
+    </video>
 
-            <div class="mt-4">
-                <a href="#" class="text-muted text-decoration-none small">¿Olvidaste tu contraseña?</a>
+    <div class="video-overlay"></div>
+
+    <div class="login-content">
+
+        <div class="brand-header">
+            <i class="bi bi-bank2 brand-icon"></i>
+            <div>
+                <div class="brand-name">LexNova</div>
+                <div class="brand-sub">Sistema Legal Bolivia</div>
             </div>
         </div>
+
+        <div class="login-center">
+            <div id="cuadro-login" class="login-card">
+
+                <i class="bi bi-shield-check logo-icon"></i>
+                <h2>LEXNOVA</h2>
+                <p class="subtitulo">Despacho Jurídico Digital</p>
+
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-danger small py-2 text-start mb-3">
+                    <i class="bi bi-exclamation-triangle me-1"></i>{{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="text"
+                           name="username"
+                           class="form-control"
+                           placeholder="Usuario"
+                           required
+                           autofocus>
+                    <input type="password"
+                           name="password"
+                           class="form-control"
+                           placeholder="Contraseña"
+                           required>
+                    <button type="submit" class="btn-login">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Ingresar al sistema
+                    </button>
+                </form>
+
+                <a href="#" class="link-recuperar">
+                    <i class="bi bi-key me-1"></i>¿Olvidaste tu contraseña?
+                </a>
+
+            </div>
+        </div>
+
+        <div class="footer-login">
+            © 2026 LexNova · Sistema Jurídico Digital · Bolivia
+        </div>
+
     </div>
 </div>
+
+<script>
+    const video = document.getElementById('fondo-video');
+    const login = document.getElementById('cuadro-login');
+
+    video.addEventListener('ended', function() {
+        video.pause(); // Congela el video en el último frame
+        login.classList.add('mostrar-login'); // Hace aparecer el login con animación suave
+    });
+</script>
 
 </body>
 </html>

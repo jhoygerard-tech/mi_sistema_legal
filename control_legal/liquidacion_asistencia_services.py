@@ -142,31 +142,56 @@ def computar_liquidacion_completa(
     tramos: list[dict],
     *,
     aplicar_duodecimas: bool = False,
+    pagos: list[dict] | None = None,
 ) -> dict:
     """
-    tramos: lista de dicts con keys fecha_inicio, fecha_fin, monto_mensual (str o date).
+    Calcula la liquidación completa por tramos y descuenta los pagos del obligado.
+    - tramos: lista con fecha_inicio, fecha_fin, monto_mensual
+    - pagos:  lista con monto, fecha, concepto  (Art. 114 Ley 603)
     """
-    todas_filas = []
-    total = Decimal('0.00')
-    total_meses = 0
+    todas_filas  = []
+    total        = Decimal('0.00')
+    total_meses  = 0
 
     for idx, tramo in enumerate(tramos, start=1):
-        fi = tramo['fecha_inicio']
-        ff = tramo['fecha_fin']
+        fi    = tramo['fecha_inicio']
+        ff    = tramo['fecha_fin']
         monto = _redondear_bs(tramo['monto_mensual'])
-        resultado = computar_tramo_liquidacion(
+        res   = computar_tramo_liquidacion(
             fi, ff, monto, aplicar_duodecimas=aplicar_duodecimas,
         )
-        for fila in resultado['filas']:
+        for fila in res['filas']:
             fila['tramo_numero'] = idx
             todas_filas.append(fila)
-        total += resultado['monto_tramo']
-        total_meses += resultado['meses_enteros']
+        total       += res['monto_tramo']
+        total_meses += res['meses_enteros']
+
+    # ── Pagos del obligado — Art. 114 Ley 603 ────────────────────
+    detalle_pagos = []
+    total_pagado  = Decimal('0.00')
+    for p in (pagos or []):
+        try:
+            monto_pago = _redondear_bs(str(p.get('monto', '0')).replace(',', '.'))
+            if monto_pago <= 0:
+                continue
+            total_pagado += monto_pago
+            detalle_pagos.append({
+                'monto':    monto_pago,
+                'fecha':    p.get('fecha') or None,
+                'concepto': p.get('concepto') or 'Pago parcial Art. 114 Ley 603',
+            })
+        except Exception:
+            continue
+
+    saldo_adeudado = _redondear_bs(total - total_pagado)
 
     return {
-        'filas': todas_filas,
-        'total_liquidacion': _redondear_bs(total),
+        'filas':               todas_filas,
+        'total_liquidacion':   _redondear_bs(total),
         'total_meses_enteros': total_meses,
+        'total_pagado':        _redondear_bs(total_pagado),
+        'detalle_pagos':       detalle_pagos,
+        'saldo_adeudado':      saldo_adeudado,
     }
 
 
@@ -271,31 +296,74 @@ DOCUMENTOS:
 
 
 def parsear_tramos_desde_post(post_data) -> list[dict]:
-    """Lee tramos enviados como JSON o campos indexados del formulario."""
-    raw = post_data.get('tramos_json', '')
-    if raw:
-        try:
-            tramos_raw = json.loads(raw)
-        except json.JSONDecodeError:
-            tramos_raw = []
-    else:
-        tramos_raw = []
-
+    """
+    Lee tramos desde campos HTML indexados:
+        tramo_inicio_0, tramo_fin_0, tramo_monto_0
+        tramo_inicio_1, tramo_fin_1, tramo_monto_1  ...
+    No depende de JSON ni de JS para funcionar.
+    """
     tramos = []
-    for t in tramos_raw:
+    i = 0
+    while True:
+        fecha_inicio = post_data.get(f'tramo_inicio_{i}', '').strip()
+        fecha_fin    = post_data.get(f'tramo_fin_{i}', '').strip()
+        monto_raw    = post_data.get(f'tramo_monto_{i}', '').strip()
+
+        # Si no existe el campo, terminamos el loop
+        if not fecha_inicio and not fecha_fin and not monto_raw:
+            break
+
         try:
-            fi = datetime.strptime(t['fecha_inicio'], '%Y-%m-%d').date()
-            ff = datetime.strptime(t['fecha_fin'], '%Y-%m-%d').date()
-            monto = Decimal(str(t['monto_mensual']).replace(',', '.'))
+            fi    = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            ff    = datetime.strptime(fecha_fin,    '%Y-%m-%d').date()
+            monto = Decimal(monto_raw.replace(',', '.'))
             tramos.append({
-                'fecha_inicio': fi,
-                'fecha_fin': ff,
+                'fecha_inicio':  fi,
+                'fecha_fin':     ff,
                 'monto_mensual': monto,
             })
-        except (KeyError, ValueError, TypeError):
-            continue
+        except (ValueError, TypeError):
+            pass  # campo mal formado, lo ignoramos
+
+        i += 1
+        if i > 50:  # límite de seguridad
+            break
+
     return tramos
 
+
+def parsear_pagos_desde_post(post_data) -> list[dict]:
+    """
+    Lee pagos desde campos HTML indexados:
+        pago_fecha_0, pago_monto_0, pago_concepto_0
+        pago_fecha_1, pago_monto_1, pago_concepto_1  ...
+    No depende de JSON ni de JS para funcionar.
+    """
+    pagos = []
+    i = 0
+    while True:
+        monto_raw = post_data.get(f'pago_monto_{i}', '').strip()
+
+        # Si no existe el campo de monto, terminamos
+        if not monto_raw and f'pago_monto_{i}' not in post_data:
+            break
+
+        try:
+            monto = Decimal(monto_raw.replace(',', '.'))
+            if monto > 0:
+                pagos.append({
+                    'monto':    monto,
+                    'fecha':    post_data.get(f'pago_fecha_{i}',    '').strip() or None,
+                    'concepto': post_data.get(f'pago_concepto_{i}', '').strip() or '',
+                })
+        except (ValueError, TypeError):
+            pass
+
+        i += 1
+        if i > 100:
+            break
+
+    return pagos
 
 def generar_pdf_liquidacion_asistencia(datos_planilla: dict) -> io.BytesIO:
     """Planilla judicial boliviana — Ley 603."""
@@ -321,7 +389,7 @@ def generar_pdf_liquidacion_asistencia(datos_planilla: dict) -> io.BytesIO:
 
     elementos = [
         Paragraph('PLANILLA DE LIQUIDACIÓN DE ASISTENCIA FAMILIAR', titulo),
-        Paragraph('Ley N° 603 del Estado Plurinacional de Bolivia — Mes vencido', subtitulo),
+        Paragraph('Ley N° 603 Codigo de las Familias y del Proceso Familiar', subtitulo),
         Spacer(1, 0.3 * cm),
         Paragraph(
             f'<b>Distrito Judicial:</b> {datos_planilla.get("distrito_judicial", "")}<br/>'

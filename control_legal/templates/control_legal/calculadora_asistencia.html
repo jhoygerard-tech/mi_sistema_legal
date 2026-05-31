@@ -4,266 +4,837 @@
 
 {% block estilos_extra %}
 <style>
-  .tramo-card { border: 1px solid #e2e6ef; border-radius: 10px; padding: 1rem; margin-bottom: .75rem; background: #fafbfc; }
-  .tabla-liquidacion th { font-size: .78rem; background: #1a2744; color: #fff; }
-  .tabla-liquidacion td { font-size: .85rem; vertical-align: middle; }
+/* ══ VARIABLES LEXNOVA ══ */
+:root {
+  --ln-navy:  #1a2744;
+  --ln-blue:  #2d4a8a;
+  --ln-light: #e8ecf4;
+  --ln-green: #198754;
+  --ln-gold:  #c9962a;
+  --ln-bgrow: #f4f7fd;
+}
+
+/* ══ HEADER ══ */
+.af-header {
+  background: linear-gradient(135deg, var(--ln-navy) 0%, var(--ln-blue) 100%);
+  border-radius: 14px;
+  padding: 28px 32px;
+  color: #fff;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.af-header::before {
+  content: '⚖';
+  position: absolute;
+  right: 28px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 6rem;
+  opacity: .07;
+  line-height: 1;
+}
+.af-header h4 { font-weight: 800; letter-spacing: .5px; margin: 0 0 4px; }
+.af-header small { opacity: .7; font-size: .82rem; }
+.af-header .btn-header {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff;
+  font-size: .78rem;
+  border-radius: 8px;
+  padding: 5px 14px;
+  text-decoration: none;
+  transition: background .2s;
+}
+.af-header .btn-header:hover { background: rgba(255,255,255,.25); color: #fff; }
+.af-header .btn-header.primary {
+  background: rgba(255,255,255,.22);
+  border-color: rgba(255,255,255,.5);
+  font-weight: 600;
+}
+
+/* ══ CARDS ══ */
+.af-card {
+  background: #fff;
+  border: 1px solid #e2e8f4;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(26,39,68,.06);
+}
+.af-card-title {
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ln-blue);
+  border-bottom: 2px solid var(--ln-light);
+  padding-bottom: 10px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.af-card-title i { font-size: 1rem; }
+.af-card-title .btn-card-action {
+  margin-left: auto;
+  font-size: .72rem;
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+
+/* ══ TRAMOS Y PAGOS ══ */
+.tramo-card {
+  border: 1px solid #d4def5;
+  border-left: 3px solid var(--ln-blue);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--ln-bgrow);
+  transition: box-shadow .2s;
+}
+.tramo-card:hover { box-shadow: 0 2px 12px rgba(45,74,138,.1); }
+
+.pago-card {
+  border: 1px solid #b7e4c7;
+  border-left: 3px solid var(--ln-green);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #f0faf4;
+  transition: box-shadow .2s;
+}
+.pago-card:hover { box-shadow: 0 2px 12px rgba(25,135,84,.1); }
+
+/* ══ INPUTS ══ */
+.form-label { font-size: .82rem; font-weight: 600; color: #3a4a6b; margin-bottom: 4px; }
+.form-control, .form-select {
+  border: 1px solid #d8dff0;
+  border-radius: 8px;
+  font-size: .88rem;
+  padding: 9px 12px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--ln-blue);
+  box-shadow: 0 0 0 3px rgba(45,74,138,.12);
+}
+.input-group-text {
+  background: var(--ln-light);
+  border-color: #d8dff0;
+  font-size: .82rem;
+  color: var(--ln-navy);
+  font-weight: 600;
+}
+
+/* ══ BOTONES PRINCIPALES ══ */
+.btn-calcular {
+  background: linear-gradient(135deg, var(--ln-navy), var(--ln-blue));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 32px;
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: opacity .2s, transform .15s, box-shadow .2s;
+}
+.btn-calcular:hover {
+  opacity: .92;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(26,39,68,.3);
+}
+.btn-pdf-af {
+  background: linear-gradient(135deg, #7b1515, #c0392b);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 32px;
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: opacity .2s, transform .15s;
+}
+.btn-pdf-af:hover { opacity: .92; transform: translateY(-2px); }
+
+/* ══ TABLA RESULTADO ══ */
+.tabla-af thead th {
+  background: var(--ln-navy);
+  color: #fff;
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  padding: 11px 14px;
+  border: none;
+}
+.tabla-af tbody td {
+  font-size: .855rem;
+  padding: 11px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f0f3fa;
+}
+.tabla-af tbody tr:nth-child(even) { background: var(--ln-bgrow); }
+.tabla-af tbody tr:hover { background: #eef2fb; }
+.tabla-af tfoot td {
+  font-size: .875rem;
+  padding: 11px 14px;
+  border-top: 2px solid var(--ln-navy);
+}
+
+/* ══ BADGE TRAMO/DUODÉCIMA ══ */
+.badge-tramo {
+  background: var(--ln-light);
+  color: var(--ln-navy);
+  font-size: .68rem;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-weight: 700;
+  border: 1px solid #c8d4f0;
+}
+
+/* ══ RESUMEN EJECUTIVO ══ */
+.resumen-af {
+  background: linear-gradient(135deg, var(--ln-navy) 0%, var(--ln-blue) 100%);
+  color: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.resumen-af .cifra { font-size: 1.9rem; font-weight: 800; }
+.resumen-af .label-res {
+  font-size: .7rem;
+  opacity: .7;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+/* ══ ALERTA APREMIO ══ */
+.alerta-apremio {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid var(--ln-gold);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: .85rem;
+  color: #78350f;
+  margin-bottom: 20px;
+}
+
+/* ══ DISCLAIMER ══ */
+.disclaimer-af {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid var(--ln-gold);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: .78rem;
+  color: #78350f;
+  margin-top: 20px;
+}
+
+/* ══ ESTADO INICIAL ══ */
+.estado-inicial-af {
+  text-align: center;
+  padding: 48px 20px;
+  color: #9aa4bf;
+}
+.estado-inicial-af i { font-size: 3.5rem; color: #d0d8ee; display: block; margin-bottom: 12px; }
+
+/* ══ ANIMACIÓN ══ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim-in { animation: fadeInUp .4s ease both; }
+
+/* ══ RESUMEN PAGOS DINÁMICO ══ */
+#resumen-pagos-dinamico {
+  background: var(--ln-light);
+  border: 1px solid #c8d4f0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-top: 12px;
+  display: none;
+}
 </style>
 {% endblock %}
 
 {% block contenido %}
 
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+<!-- ══ HEADER ══ -->
+<div class="af-header">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
     <div>
-        <h5 class="fw-bold mb-0">Calculadora de Liquidación de Asistencia Familiar</h5>
-        <small class="text-muted">Ley N° 603 · Cómputo por mes vencido (fecha a fecha)</small>
+      <h4><i class="bi bi-heart-pulse-fill me-2"></i>Calculadora de Liquidación — Asistencia Familiar</h4>
+      <small>
+        Ley N° 603 (CFPF) · Art. 109 y ss. · Cómputo por mes vencido (fecha a fecha)
+        · Art. 116 pagos parciales · Art. 415 apremio corporal
+      </small>
     </div>
-    <div class="d-flex gap-2">
-        {% if expediente %}
-        <a href="{% url 'detalle_caso' expediente.pk %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left"></i> Expediente
-        </a>
-        {% endif %}
-        <a href="{% url 'listar_casos' %}?buscar=Familia" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-folder2-open"></i> Casos de Familia
-        </a>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if expediente %}
+      <a href="{% url 'detalle_caso' expediente.pk %}" class="btn-header">
+        <i class="bi bi-arrow-left me-1"></i>Expediente
+      </a>
+      {% endif %}
+      <a href="{% url 'listar_casos' %}?buscar=Familia" class="btn-header">
+        <i class="bi bi-folder2-open me-1"></i>Casos de Familia
+      </a>
+      <a href="{% url 'calculadora_asistencia' %}" class="btn-header primary">
+        <i class="bi bi-plus-circle me-1"></i>Nueva liquidación
+      </a>
     </div>
+  </div>
 </div>
 
 {% if expediente %}
-<div class="alert alert-info py-2 small mb-3">
-    <i class="bi bi-folder-check me-1"></i>
-    Integrado al expediente <strong>{{ expediente.nurej|default:expediente.pk }}</strong>
-    — {{ expediente.cliente.nombre_completo }}.
+<div class="af-card mb-3 py-2 px-3" style="background:#eef6ff;border-color:#b6d4f5;">
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <i class="bi bi-folder-check text-primary"></i>
+    <span class="small">
+      Integrado al expediente <strong>{{ expediente.nurej|default:expediente.pk }}</strong>
+      — {{ expediente.cliente.nombre_completo }}
+    </span>
     {% if expediente.documentos.count %}
-    <button type="button" class="btn btn-sm btn-primary ms-2" id="btn-extraer-ia" data-url="{% url 'api_extraer_ia_liquidacion' expediente.pk %}">
-        <i class="bi bi-robot"></i> Autocompletar con IA (documentos)
+    <button type="button" class="btn btn-sm btn-primary ms-auto" id="btn-extraer-ia"
+            data-url="{% url 'api_extraer_ia_liquidacion' expediente.pk %}">
+      <i class="bi bi-robot me-1"></i>Autocompletar con IA
     </button>
     {% else %}
-    <span class="text-muted ms-1">Suba PDF/Word al expediente para usar la extracción IA.</span>
+    <span class="text-muted small ms-auto">
+      <i class="bi bi-info-circle me-1"></i>Suba documentos al expediente para usar la extracción IA.
+    </span>
     {% endif %}
+  </div>
 </div>
 {% endif %}
 
 {% if error %}
-<div class="alert alert-danger">{{ error }}</div>
-{% endif %}
-
-<form method="POST" id="form-liquidacion">
-    {% csrf_token %}
-
-    <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
-        <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
-            <h6 class="fw-bold mb-0">Datos de la causa</h6>
-        </div>
-        <div class="card-body p-4">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small">Distrito Judicial</label>
-                    <select name="distrito_judicial" id="distrito_judicial" class="form-select" required>
-                        <option value="">— Seleccione —</option>
-                        {% for d in distritos %}
-                        <option value="{{ d }}" {% if distrito_actual == d %}selected{% endif %}>{{ d }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small">Juzgado de la Causa</label>
-                    <input type="text" name="juzgado" id="juzgado" class="form-control" required
-                        value="{{ juzgado_actual }}">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small">NUREJ / IANUS</label>
-                    <input type="text" name="nurej_ianus" id="nurej_ianus" class="form-control" required
-                        value="{{ nurej_actual }}">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold small">Partes</label>
-                    <input type="text" name="partes" id="partes" class="form-control" required
-                        placeholder="Demandante / Demandado"
-                        value="{{ partes_actual }}">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
-        <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
-            <h6 class="fw-bold mb-0">Cómputo por tramos</h6>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="btn-agregar-tramo">
-                <i class="bi bi-plus-lg"></i> AÑADIR CÓMPUTO VARIABLE
-            </button>
-        </div>
-        <div class="card-body p-4">
-            <div id="contenedor-tramos"></div>
-
-            <div class="form-check mt-3 p-3 bg-light rounded border">
-                <input class="form-check-input" type="checkbox" name="aplicar_duodecimas" id="aplicar_duodecimas"
-                    {% if aplicar_duodecimas %}checked{% endif %}>
-                <label class="form-check-label fw-semibold" for="aplicar_duodecimas">
-                    ¿Aplicar fraccionamiento por duodécimas en el mes de corte?
-                </label>
-                <div class="form-text">
-                    Desactivado (por defecto): no se liquidan días residuales que no completan un mes entero.
-                    Activado: Monto Mensual ÷ 30 × días sobrantes del último tramo.
-                </div>
-            </div>
-
-            <input type="hidden" name="tramos_json" id="tramos_json" value="">
-        </div>
-    </div>
-
-    <div class="d-flex flex-wrap gap-2 mb-4">
-        <button type="submit" name="accion" value="calcular" class="btn btn-primary">
-            <i class="bi bi-calculator me-1"></i> Calcular liquidación
-        </button>
-        <button type="submit" name="accion" value="reporte_pdf" class="btn btn-danger">
-            <i class="bi bi-file-earmark-pdf me-1"></i> Reporte (PDF judicial)
-        </button>
-    </div>
-</form>
-
-{% if resultado %}
-<div class="card border-0 shadow-sm" style="border-radius:12px;">
-    <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
-        <h6 class="fw-bold mb-0">Resultado del cómputo</h6>
-    </div>
-    <div class="card-body p-4">
-        <div class="alert alert-success">
-            <strong>Total a pagar: Bs {{ resultado.total_liquidacion|floatformat:2 }}</strong>
-            — {{ resultado.total_meses_enteros }} mes(es) enteros (mes vencido).
-        </div>
-        <div class="table-responsive">
-            <table class="table table-bordered tabla-liquidacion mb-0">
-                <thead>
-                    <tr>
-                        <th>Monto de Asistencia Acordada</th>
-                        <th>Periodo de liquidación (Del — Al)</th>
-                        <th>Meses cumplidos</th>
-                        <th>Monto a Pagar</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for f in resultado.filas %}
-                    <tr>
-                        <td>Bs {{ f.monto_acordado|floatformat:2 }}</td>
-                        <td>Del {{ f.fecha_del|date:"d/m/Y" }} al {{ f.fecha_al|date:"d/m/Y" }}</td>
-                        <td>{{ f.meses_label }}{% if f.tramo_numero %} <span class="text-muted">(Tramo {{ f.tramo_numero }})</span>{% endif %}</td>
-                        <td class="fw-semibold">Bs {{ f.monto_pagar|floatformat:2 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr class="table-light">
-                        <td colspan="3" class="text-end fw-bold">TOTAL</td>
-                        <td class="fw-bold">Bs {{ resultado.total_liquidacion|floatformat:2 }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
+<div class="alert alert-danger d-flex gap-2 align-items-center mb-3">
+  <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+  <span>{{ error }}</span>
 </div>
 {% endif %}
+
+<div class="row g-4">
+
+  <!-- ══ COLUMNA FORMULARIO ══ -->
+  <div class="col-lg-5">
+
+    <form method="POST" id="form-liquidacion">
+      {% csrf_token %}
+      <input type="hidden" name="accion"     id="campo-accion"  value="calcular">
+      <input type="hidden" name="tramos_json" id="tramos_json"  value="">
+      <input type="hidden" name="pagos_json"  id="pagos_json"   value="[]">
+
+      <!-- DATOS DE LA CAUSA -->
+      <div class="af-card">
+        <div class="af-card-title">
+          <i class="bi bi-file-earmark-text"></i> Datos de la Causa
+        </div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Distrito Judicial</label>
+            <select name="distrito_judicial" id="distrito_judicial" class="form-select">
+              <option value="">— Seleccione —</option>
+              {% for d in distritos %}
+              <option value="{{ d }}" {% if distrito_actual == d %}selected{% endif %}>{{ d }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Juzgado de la Causa</label>
+            <input type="text" name="juzgado" id="juzgado" class="form-control"
+                   value="{{ juzgado_actual }}"
+                   placeholder="Ej: Juzgado 1° de Familia El Alto">
+          </div>
+          <div class="col-12">
+            <label class="form-label">NUREJ / IANUS</label>
+            <input type="text" name="nurej_ianus" id="nurej_ianus" class="form-control"
+                   value="{{ nurej_actual }}" placeholder="Ej: 13249798">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Partes (Demandante / Demandado)</label>
+            <input type="text" name="partes" id="partes" class="form-control"
+                   value="{{ partes_actual }}"
+                   placeholder="Ej: María López / Juan Pérez">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Beneficiario(s)</label>
+            <input type="text" name="beneficiarios" id="beneficiarios" class="form-control"
+                   value="{{ beneficiarios_actual|default:'' }}"
+                   placeholder="Ej: Pedro Pérez (hijo, 8 años)">
+          </div>
+          <div class="col-12">
+            <label class="form-label">N° Resolución que fija la asistencia</label>
+            <input type="text" name="nro_resolucion" id="nro_resolucion" class="form-control"
+                   value="{{ nro_resolucion_actual|default:'' }}"
+                   placeholder="Ej: Auto N° 125/2023 de 10/03/2023">
+          </div>
+        </div>
+      </div>
+
+      <!-- CÓMPUTO POR TRAMOS -->
+      <div class="af-card">
+        <div class="af-card-title">
+          <i class="bi bi-calendar-range"></i> Cómputo por Tramos
+          <button type="button" class="btn btn-sm btn-outline-primary btn-card-action"
+                  id="btn-agregar-tramo">
+            <i class="bi bi-plus-lg me-1"></i>Añadir tramo
+          </button>
+        </div>
+        <div class="alert alert-light border-start border-primary border-3 small mb-3 py-2">
+          <i class="bi bi-info-circle me-1 text-primary"></i>
+          Agregue un tramo por cada período en que el monto fijado judicialmente fue diferente.
+        </div>
+        <div id="contenedor-tramos"></div>
+        <div class="form-check mt-3 p-3 rounded" style="background:var(--ln-light);border:1px solid #c8d4f0;">
+          <input class="form-check-input" type="checkbox" name="aplicar_duodecimas"
+                 id="aplicar_duodecimas" {% if aplicar_duodecimas %}checked{% endif %}>
+          <label class="form-check-label fw-semibold" for="aplicar_duodecimas" style="font-size:.85rem;">
+            ¿Aplicar fraccionamiento por duodécimas en el mes de corte?
+          </label>
+          <div class="form-text mt-1" style="font-size:.75rem;">
+            <strong>Desactivado:</strong> días residuales que no completan un mes no se liquidan (criterio habitual).<br>
+            <strong>Activado:</strong> Monto ÷ 30 × días sobrantes — solo si el juez lo ordena expresamente.
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGOS DEL OBLIGADO -->
+      <div class="af-card">
+        <div class="af-card-title">
+          <i class="bi bi-cash-coin text-success"></i>
+          <span>Pagos Realizados por el Obligado</span>
+          <button type="button" class="btn btn-sm btn-outline-success btn-card-action"
+                  id="btn-agregar-pago">
+            <i class="bi bi-plus-lg me-1"></i>Registrar pago
+          </button>
+        </div>
+        <div class="alert alert-light border-start border-success border-3 small mb-3 py-2">
+          <i class="bi bi-info-circle me-1 text-success"></i>
+          Ingrese los montos <strong>efectivamente pagados</strong> (Art. 116 Ley 603).
+          Se restarán del total para obtener el <strong>saldo adeudado</strong>.
+        </div>
+        <div id="contenedor-pagos">
+          <p class="text-muted small mb-0" id="texto-sin-pagos">
+            <i class="bi bi-dash-circle me-1"></i>Sin pagos registrados.
+          </p>
+        </div>
+        <div id="resumen-pagos-dinamico">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-semibold small">Total pagos registrados:</span>
+            <span class="fw-bold text-success" id="total-pagos-display">Bs. 0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTONES -->
+      <div class="d-flex flex-column gap-2">
+        <button type="button" id="btn-calcular-af" class="btn-calcular w-100">
+          <i class="bi bi-calculator me-2"></i>Calcular Liquidación
+        </button>
+        <button type="button" id="btn-pdf-af" class="btn-pdf-af w-100"
+                style="display:none;" onclick="enviarPDF()">
+          <i class="bi bi-file-earmark-pdf me-2"></i>Reporte PDF Judicial
+        </button>
+      </div>
+
+    </form>
+
+  </div><!-- fin columna formulario -->
+
+  <!-- ══ COLUMNA RESULTADOS ══ -->
+  <div class="col-lg-7">
+
+    <!-- Estado inicial -->
+    <div class="af-card estado-inicial-af" id="estado-inicial-af">
+      <i class="bi bi-heart-pulse"></i>
+      Complete el formulario y presione<br>
+      <strong>"Calcular Liquidación"</strong><br>
+      para obtener el detalle con fundamentos legales.
+    </div>
+
+    <!-- Resultados (oculto hasta calcular) -->
+    <div id="resultado-af" style="display:none;">
+
+      {% if resultado %}
+      <!-- Info general -->
+      <div class="af-card anim-in mb-3">
+        <div class="row g-0 text-center">
+          <div class="col-4 border-end">
+            <div class="af-card-title justify-content-center border-0 pb-1 mb-1" style="font-size:.68rem;">JUZGADO</div>
+            <div class="fw-bold small text-navy">{{ juzgado_actual|default:"—"|truncatechars:22 }}</div>
+          </div>
+          <div class="col-4 border-end">
+            <div class="af-card-title justify-content-center border-0 pb-1 mb-1" style="font-size:.68rem;">NUREJ</div>
+            <div class="fw-bold small">{{ nurej_actual|default:"—" }}</div>
+          </div>
+          <div class="col-4">
+            <div class="af-card-title justify-content-center border-0 pb-1 mb-1" style="font-size:.68rem;">PARTES</div>
+            <div class="fw-bold small">{{ partes_actual|default:"—"|truncatechars:22 }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla detalle -->
+      <div class="af-card p-0 overflow-hidden anim-in mb-3">
+        <div class="d-flex justify-content-between align-items-center px-4 py-3"
+             style="background:var(--ln-navy);border-radius:12px 12px 0 0;">
+          <h6 class="fw-bold mb-0 text-white">
+            <i class="bi bi-table me-2"></i>Detalle del Cómputo
+          </h6>
+          <span class="text-white opacity-75 small">Ley N° 603 CFPF</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table tabla-af mb-0">
+            <thead>
+              <tr>
+                <th>Monto Acordado</th>
+                <th>Período (Del — Al)</th>
+                <th>Meses cumplidos</th>
+                <th class="text-end">Monto a Pagar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for f in resultado.filas %}
+              <tr {% if f.es_duodecima %}style="background:#f0faf4;"{% endif %}>
+                <td class="fw-semibold">Bs {{ f.monto_acordado|floatformat:2 }}</td>
+                <td>
+                  <small>Del</small> {{ f.fecha_del|date:"d/m/Y" }}
+                  <small>al</small> {{ f.fecha_al|date:"d/m/Y" }}
+                </td>
+                <td>
+                  {{ f.meses_label }}
+                  {% if f.tramo_numero %}
+                  <span class="badge-tramo ms-1">Tramo {{ f.tramo_numero }}</span>
+                  {% endif %}
+                  {% if f.es_duodecima %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle ms-1"
+                        style="font-size:.67rem;">Duodécima</span>
+                  {% endif %}
+                </td>
+                <td class="text-end fw-bold" style="color:var(--ln-navy);">
+                  Bs {{ f.monto_pagar|floatformat:2 }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr style="background:var(--ln-light);">
+                <td colspan="3" class="text-end fw-bold" style="color:var(--ln-navy);">
+                  SUBTOTAL LIQUIDADO
+                </td>
+                <td class="text-end fw-bold" style="color:var(--ln-navy);">
+                  Bs {{ resultado.total_liquidacion|floatformat:2 }}
+                </td>
+              </tr>
+              {% if resultado.total_pagado and resultado.total_pagado > 0 %}
+              <tr style="background:#f0faf4;">
+                <td colspan="3" class="text-end fw-semibold text-success">
+                  <i class="bi bi-dash-circle me-1"></i>PAGOS ACREDITADOS (Art. 116 Ley 603)
+                </td>
+                <td class="text-end fw-bold text-success">
+                  — Bs {{ resultado.total_pagado|floatformat:2 }}
+                </td>
+              </tr>
+              {% endif %}
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Resumen ejecutivo -->
+      <div class="resumen-af anim-in">
+        <div class="row g-3 text-center">
+          <div class="col-md-4" style="border-right:1px solid rgba(255,255,255,.2);">
+            <div class="label-res">TOTAL LIQUIDADO</div>
+            <div class="cifra">Bs {{ resultado.total_liquidacion|floatformat:2 }}</div>
+            <div class="small opacity-75">{{ resultado.total_meses_enteros }} mes(es) cumplido(s)</div>
+          </div>
+          <div class="col-md-4" style="border-right:1px solid rgba(255,255,255,.2);">
+            <div class="label-res">PAGOS ACREDITADOS</div>
+            <div class="cifra" style="color:#6ee7a0;">
+              Bs {% if resultado.total_pagado %}{{ resultado.total_pagado|floatformat:2 }}{% else %}0.00{% endif %}
+            </div>
+            <div class="small opacity-75">
+              {% if resultado.detalle_pagos %}{{ resultado.detalle_pagos|length }} pago(s){% else %}Sin pagos{% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="label-res">SALDO ADEUDADO</div>
+            <div class="cifra"
+                 style="color:{% if resultado.saldo_adeudado <= 0 %}#6ee7a0{% else %}#ffd166{% endif %};">
+              Bs {{ resultado.saldo_adeudado|floatformat:2 }}
+            </div>
+            <div class="small opacity-75">
+              {% if resultado.saldo_adeudado <= 0 %}
+              <i class="bi bi-check-circle me-1"></i>Obligación cumplida
+              {% else %}
+              <i class="bi bi-exclamation-triangle me-1"></i>Pendiente de cobro
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerta apremio -->
+      {% if resultado.saldo_adeudado > 0 %}
+      <div class="alerta-apremio anim-in">
+        <strong><i class="bi bi-exclamation-triangle me-1"></i>
+        Saldo adeudado: Bs {{ resultado.saldo_adeudado|floatformat:2 }}</strong><br>
+        <small>
+          Conforme al <strong>Art. 415 Ley N° 603 (CFPF)</strong>, el incumplimiento de la
+          asistencia familiar puede dar lugar a <strong>mandamiento de apremio corporal</strong>.
+          Se recomienda solicitar conminatoria judicial de inmediato.
+        </small>
+      </div>
+      {% elif resultado.total_pagado and resultado.total_pagado > 0 %}
+      <div class="alert alert-success anim-in">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>Obligación cumplida a la fecha del cómputo.</strong>
+        Los pagos acreditados cubren el monto total liquidado.
+      </div>
+      {% endif %}
+
+      <!-- Detalle pagos -->
+      {% if resultado.detalle_pagos %}
+      <div class="af-card anim-in">
+        <div class="af-card-title">
+          <i class="bi bi-receipt text-success"></i> Detalle de Pagos Acreditados
+        </div>
+        <div class="table-responsive">
+          <table class="table tabla-af table-sm mb-0">
+            <thead>
+              <tr>
+                <th>#</th><th>Fecha</th>
+                <th>Concepto / Referencia</th><th class="text-end">Monto (Bs.)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in resultado.detalle_pagos %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ p.fecha|default:"—" }}</td>
+                <td>{{ p.concepto|default:"Pago parcial Art. 116 Ley 603" }}</td>
+                <td class="text-end fw-bold text-success">Bs {{ p.monto|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr style="background:var(--ln-light);">
+                <td colspan="3" class="text-end fw-bold">TOTAL PAGADO</td>
+                <td class="text-end fw-bold text-success">Bs {{ resultado.total_pagado|floatformat:2 }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Disclaimer -->
+      <div class="disclaimer-af anim-in">
+        <strong><i class="bi bi-shield-exclamation me-1"></i>Advertencia Legal:</strong>
+        Esta liquidación es una <strong>estimación referencial</strong> basada en la
+        Ley N° 603 (CFPF). No constituye resolución judicial. Los montos definitivos
+        serán determinados por el juzgado competente conforme al expediente.
+        LexNova no asume responsabilidad por decisiones tomadas exclusivamente en base
+        a esta estimación.
+      </div>
+
+      {% endif %}
+    </div><!-- fin resultado-af -->
+
+  </div><!-- fin col resultados -->
+
+</div><!-- fin row -->
 
 {% endblock %}
 
 {% block scripts_extra %}
 <script>
-(function() {
-    const hoy = '{{ hoy }}';
-    const iniFecha = '{{ post.fecha_inicio|default:valores_iniciales.fecha_inicio|default:"" }}';
-    const iniMonto = '{{ post.monto_mensual|default:valores_iniciales.monto_mensual|default:"" }}';
-    const contenedor = document.getElementById('contenedor-tramos');
-    let tramoIdx = 0;
+document.addEventListener('DOMContentLoaded', function () {
 
-    function crearTramoHTML(idx, datos) {
-        datos = datos || {};
-        return `
-        <div class="tramo-card" data-tramo="${idx}">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-semibold small text-primary">Tramo ${idx + 1}</span>
-                ${idx > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger btn-quitar-tramo"><i class="bi bi-trash"></i></button>' : ''}
-            </div>
-            <div class="row g-2">
-                <div class="col-md-4">
-                    <label class="form-label small">Fecha de Inicio (Citación o Última Liquidación)</label>
-                    <input type="date" class="form-control tramo-inicio" value="${datos.fecha_inicio || iniFecha || ''}" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small">Fecha final del cómputo</label>
-                    <input type="date" class="form-control tramo-fin" value="${datos.fecha_fin || hoy}" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small">Monto mensual fijado (Bs.)</label>
-                    <input type="number" step="0.01" min="0" class="form-control tramo-monto" value="${datos.monto_mensual || iniMonto || ''}" required>
-                </div>
-            </div>
-        </div>`;
-    }
+  var hoy      = '{{ hoy }}';
+  var tramoIdx = 0;
+  var pagoIdx  = 0;
 
-    function agregarTramo(datos) {
-        contenedor.insertAdjacentHTML('beforeend', crearTramoHTML(tramoIdx, datos));
-        tramoIdx++;
-        enlazarQuitar();
-    }
+  // ════════════════════════════════════════════════════
+  // TRAMOS
+  // ════════════════════════════════════════════════════
+  function crearTramoHTML(idx, datos) {
+    datos = datos || {};
+    return '<div class="tramo-card" data-tramo="' + idx + '">'
+      + '<div class="d-flex justify-content-between align-items-center mb-3">'
+      + '<span class="fw-bold small" style="color:var(--ln-blue);">'
+      + '<i class="bi bi-calendar3 me-1"></i>Tramo ' + (idx + 1) + '</span>'
+      + (idx > 0
+          ? '<button type="button" class="btn btn-sm btn-outline-danger btn-quitar-tramo">'
+            + '<i class="bi bi-trash me-1"></i>Quitar</button>'
+          : '')
+      + '</div>'
+      + '<div class="row g-2">'
+      + '<div class="col-md-4">'
+      + '<label class="form-label">Fecha inicio <small class="text-muted fw-normal">(citación)</small></label>'
+      + '<input type="date" name="tramo_inicio_' + idx + '" class="form-control tramo-inicio"'
+      + ' value="' + (datos.fecha_inicio || '') + '">'
+      + '</div>'
+      + '<div class="col-md-4">'
+      + '<label class="form-label">Fecha final del cómputo</label>'
+      + '<input type="date" name="tramo_fin_' + idx + '" class="form-control tramo-fin"'
+      + ' value="' + (datos.fecha_fin || hoy) + '">'
+      + '</div>'
+      + '<div class="col-md-4">'
+      + '<label class="form-label">Monto mensual fijado (Bs.)</label>'
+      + '<div class="input-group">'
+      + '<span class="input-group-text">Bs.</span>'
+      + '<input type="number" step="0.01" min="0" name="tramo_monto_' + idx + '"'
+      + ' class="form-control tramo-monto" value="' + (datos.monto_mensual || '') + '"'
+      + ' placeholder="0.00">'
+      + '</div></div></div></div>';
+  }
 
-    function enlazarQuitar() {
-        document.querySelectorAll('.btn-quitar-tramo').forEach(btn => {
-            btn.onclick = function() {
-                this.closest('.tramo-card').remove();
-            };
-        });
-    }
+  function agregarTramo(datos) {
+    document.getElementById('contenedor-tramos')
+      .insertAdjacentHTML('beforeend', crearTramoHTML(tramoIdx, datos));
+    tramoIdx++;
+    enlazarQuitarTramo();
+  }
 
-    document.getElementById('btn-agregar-tramo').addEventListener('click', () => agregarTramo({}));
-
-    agregarTramo({});
-
-    document.getElementById('form-liquidacion').addEventListener('submit', function() {
-        const tramos = [];
-        document.querySelectorAll('.tramo-card').forEach(card => {
-            tramos.push({
-                fecha_inicio: card.querySelector('.tramo-inicio').value,
-                fecha_fin: card.querySelector('.tramo-fin').value,
-                monto_mensual: card.querySelector('.tramo-monto').value,
-            });
-        });
-        document.getElementById('tramos_json').value = JSON.stringify(tramos);
+  function enlazarQuitarTramo() {
+    document.querySelectorAll('.btn-quitar-tramo').forEach(function (btn) {
+      btn.onclick = function () { this.closest('.tramo-card').remove(); };
     });
+  }
 
-    const btnIa = document.getElementById('btn-extraer-ia');
-    if (btnIa) {
-        btnIa.addEventListener('click', async function() {
-            const url = this.dataset.url;
-            btnIa.disabled = true;
-            btnIa.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analizando...';
-            try {
-                const r = await fetch(url);
-                const data = await r.json();
-                if (!data.ok) {
-                    alert(data.error || 'No se pudo extraer datos.');
-                    return;
-                }
-                const d = data.datos;
-                if (d.distrito_judicial) document.getElementById('distrito_judicial').value = d.distrito_judicial;
-                if (d.juzgado) document.getElementById('juzgado').value = d.juzgado;
-                if (d.nurej_ianus) document.getElementById('nurej_ianus').value = d.nurej_ianus;
-                if (d.partes) document.getElementById('partes').value = d.partes;
-                const card = document.querySelector('.tramo-card');
-                if (card && d.fecha_inicio) card.querySelector('.tramo-inicio').value = d.fecha_inicio;
-                if (card && d.monto_mensual) card.querySelector('.tramo-monto').value = d.monto_mensual;
-                alert('Datos cargados. Verifique fechas y montos antes de calcular.');
-            } catch (e) {
-                alert('Error de conexión con el servicio de IA.');
-            } finally {
-                btnIa.disabled = false;
-                btnIa.innerHTML = '<i class="bi bi-robot"></i> Autocompletar con IA (documentos)';
-            }
-        });
+  document.getElementById('btn-agregar-tramo').addEventListener('click', function () {
+    agregarTramo({});
+  });
+  agregarTramo({});
+
+  // ════════════════════════════════════════════════════
+  // PAGOS
+  // ════════════════════════════════════════════════════
+  function crearPagoHTML(idx, datos) {
+    datos = datos || {};
+    return '<div class="pago-card" data-pago="' + idx + '">'
+      + '<div class="d-flex justify-content-between align-items-center mb-3">'
+      + '<span class="fw-bold small text-success"><i class="bi bi-cash me-1"></i>Pago ' + (idx + 1) + '</span>'
+      + '<button type="button" class="btn btn-sm btn-outline-danger btn-quitar-pago">'
+      + '<i class="bi bi-trash me-1"></i>Quitar</button></div>'
+      + '<div class="row g-2">'
+      + '<div class="col-md-4"><label class="form-label">Fecha del pago</label>'
+      + '<input type="date" name="pago_fecha_' + idx + '" class="form-control pago-fecha"'
+      + ' value="' + (datos.fecha || '') + '"></div>'
+      + '<div class="col-md-4"><label class="form-label">Monto pagado (Bs.)</label>'
+      + '<div class="input-group"><span class="input-group-text text-success">Bs.</span>'
+      + '<input type="number" step="0.01" min="0" name="pago_monto_' + idx + '"'
+      + ' class="form-control pago-monto" value="' + (datos.monto || '') + '"'
+      + ' placeholder="0.00"></div></div>'
+      + '<div class="col-md-4"><label class="form-label">Concepto / Referencia</label>'
+      + '<input type="text" name="pago_concepto_' + idx + '" class="form-control pago-concepto"'
+      + ' value="' + (datos.concepto || '') + '" placeholder="Ej: Recibo N° 001">'
+      + '</div></div></div>';
+  }
+
+  function actualizarTotalPagos() {
+    var total = 0;
+    document.querySelectorAll('[name^="pago_monto_"]').forEach(function (inp) {
+      var v = parseFloat(inp.value);
+      if (!isNaN(v) && v > 0) total += v;
+    });
+    var res = document.getElementById('resumen-pagos-dinamico');
+    if (total > 0) {
+      res.style.display = 'block';
+      document.getElementById('total-pagos-display').textContent =
+        'Bs. ' + total.toFixed(2);
+    } else {
+      res.style.display = 'none';
     }
+  }
 
+  document.getElementById('btn-agregar-pago').addEventListener('click', function () {
+    var sinPagos = document.getElementById('texto-sin-pagos');
+    if (sinPagos) sinPagos.style.display = 'none';
+    document.getElementById('contenedor-pagos')
+      .insertAdjacentHTML('beforeend', crearPagoHTML(pagoIdx, {}));
+    pagoIdx++;
+    document.querySelectorAll('.btn-quitar-pago').forEach(function (btn) {
+      btn.onclick = function () {
+        this.closest('.pago-card').remove();
+        actualizarTotalPagos();
+        if (!document.querySelector('.pago-card')) {
+          var sp = document.getElementById('texto-sin-pagos');
+          if (sp) sp.style.removeProperty('display');
+        }
+      };
+    });
+    document.querySelector('[name="pago_monto_' + (pagoIdx - 1) + '"]')
+      .addEventListener('input', actualizarTotalPagos);
+  });
+
+  // ════════════════════════════════════════════════════
+  // ENVÍO DEL FORMULARIO
+  // ════════════════════════════════════════════════════
+  function prepararYEnviar(accion) {
+    document.getElementById('campo-accion').value = accion;
+    document.getElementById('form-liquidacion').submit();
+  }
+
+  document.getElementById('btn-calcular-af').addEventListener('click', function () {
+    prepararYEnviar('calcular');
+  });
+
+  window.enviarPDF = function () {
+    var btn = document.getElementById('btn-pdf-af');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generando PDF...';
+    prepararYEnviar('reporte_pdf');
+  };
+
+  // Mostrar columna de resultados y botón PDF si ya hay resultado
+  {% if resultado %}
+  document.getElementById('estado-inicial-af').style.display = 'none';
+  document.getElementById('resultado-af').style.display = 'block';
+  document.getElementById('btn-pdf-af').style.display = 'block';
+  {% endif %}
+
+  // ════════════════════════════════════════════════════
+  // IA — Autocompletar desde documentos
+  // ════════════════════════════════════════════════════
+  var btnIa = document.getElementById('btn-extraer-ia');
+  if (btnIa) {
+    btnIa.addEventListener('click', function () {
+      btnIa.disabled = true;
+      btnIa.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analizando...';
+      fetch(btnIa.getAttribute('data-url'))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.ok) { alert(data.error || 'No se pudo extraer datos.'); return; }
+          var d = data.datos;
+          if (d.distrito_judicial) document.getElementById('distrito_judicial').value = d.distrito_judicial;
+          if (d.juzgado)           document.getElementById('juzgado').value           = d.juzgado;
+          if (d.nurej_ianus)       document.getElementById('nurej_ianus').value       = d.nurej_ianus;
+          if (d.partes)            document.getElementById('partes').value            = d.partes;
+          var card = document.querySelector('.tramo-card');
+          if (card && d.fecha_inicio)  card.querySelector('.tramo-inicio').value = d.fecha_inicio;
+          if (card && d.monto_mensual) card.querySelector('.tramo-monto').value  = d.monto_mensual;
+          alert('✅ Datos cargados. Verificá fechas y montos antes de calcular.');
+        })
+        .catch(function () { alert('Error de conexión con el servicio de IA.'); })
+        .finally(function () {
+          btnIa.disabled = false;
+          btnIa.innerHTML = '<i class="bi bi-robot me-1"></i>Autocompletar con IA';
+        });
+    });
     {% if expediente and request.GET.extraer_ia == '1' %}
-    if (btnIa) btnIa.click();
+    btnIa.click();
     {% endif %}
-})();
+  }
+
+}); // fin DOMContentLoaded
 </script>
 {% endblock %}

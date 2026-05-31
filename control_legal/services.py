@@ -977,3 +977,101 @@ def generar_pdf_reporte(html: str) -> io.BytesIO:
     return result
 
 
+# ══════════════════════════════════════════════════════════════
+# CONSTANTES — pega en services.py junto a las otras constantes
+# ══════════════════════════════════════════════════════════════
+
+IDIOMAS_NATIVOS = {
+    'quechua': 'Quechua (Qhichwa)',
+    'aymara':  'Aymara (Aymar Aru)',
+}
+
+CONTEXTOS_IDIOMA = {
+    'expediente':   'el estado y avance de un caso judicial',
+    'movimiento':   'una actuación procesal ocurrida en un caso judicial',
+    'documento':    'un documento legal adjunto a un expediente judicial',
+    'contrato':     'un contrato legal firmado entre las partes',
+    'memorial':     'un escrito judicial presentado ante un juez',
+    'liquidacion':  'el cálculo de una deuda de asistencia familiar',
+    'tarea':        'una tarea o instrucción asignada dentro del caso',
+    'evento':       'una audiencia o evento judicial próximo',
+    'jurisprudencia': 'una sentencia judicial citada como precedente',
+    'general':      'un documento o actuación legal',
+}
+
+PROMPT_IDIOMA_NATIVO = """
+Eres un traductor e intérprete jurídico especializado en Bolivia, con dominio del {idioma_nombre} y del derecho boliviano.
+
+Tu misión es explicar el siguiente texto legal en {idioma_nombre}, de forma clara, simple y respetuosa, para que una persona que habla ese idioma como lengua materna pueda entender perfectamente qué está pasando con su caso.
+
+CONTEXTO: El texto trata sobre {contexto}.
+
+TEXTO ORIGINAL (en español jurídico):
+{texto}
+
+INSTRUCCIONES:
+1. Primero escribe la explicación COMPLETA en {idioma_nombre}.
+2. Luego escribe la misma explicación en español simple (sin tecnicismos), separada por una línea con "---".
+3. Usa un tono cálido, cercano y respetuoso — como hablaría un abogado de confianza.
+4. Evita términos legales complejos en ambas versiones. Si debes usarlos, explícalos.
+5. Si hay fechas, montos o plazos importantes, destácalos claramente.
+6. Incluye al final en {idioma_nombre} qué debe hacer o qué pasará a continuación (si se puede inferir del texto).
+7. Máximo 300 palabras por sección.
+
+Formato de respuesta:
+[EXPLICACIÓN EN {idioma_nombre_mayus}]
+(aquí la explicación en idioma nativo)
+
+---
+
+[EXPLICACIÓN EN ESPAÑOL SIMPLE]
+(aquí la explicación en español sin tecnicismos)
+"""
+
+
+# ══════════════════════════════════════════════════════════════
+# FUNCIÓN PRINCIPAL — pega en services.py
+# ══════════════════════════════════════════════════════════════
+
+def explicar_en_idioma_nativo(
+    texto: str,
+    idioma: str,
+    contexto: str = 'general',
+) -> tuple[str | None, str | None]:
+    """
+    Genera una explicación del texto jurídico en Quechua o Aymara
+    acompañada de su versión en español simple.
+
+    Parámetros:
+        texto    : Texto jurídico a explicar (memorial, contrato, descripción, etc.)
+        idioma   : 'quechua' o 'aymara'
+        contexto : Clave del diccionario CONTEXTOS_IDIOMA (ej. 'contrato', 'expediente')
+
+    Retorna:
+        (explicacion_str, error_str) — uno de los dos será None.
+    """
+    idioma = (idioma or '').lower().strip()
+    if idioma not in IDIOMAS_NATIVOS:
+        return None, f'Idioma no soportado: {idioma}. Usa "quechua" o "aymara".'
+
+    texto = (texto or '').strip()
+    if not texto:
+        return None, 'No hay texto para explicar.'
+    if len(texto) < 20:
+        return None, 'El texto es demasiado corto para generar una explicación.'
+
+    # Limitar texto de entrada para no exceder tokens
+    texto_recortado = texto[:6000] if len(texto) > 6000 else texto
+
+    idioma_nombre      = IDIOMAS_NATIVOS[idioma]
+    idioma_nombre_mayus = idioma_nombre.upper()
+    contexto_desc      = CONTEXTOS_IDIOMA.get(contexto, CONTEXTOS_IDIOMA['general'])
+
+    prompt = PROMPT_IDIOMA_NATIVO.format(
+        idioma_nombre=idioma_nombre,
+        idioma_nombre_mayus=idioma_nombre_mayus,
+        contexto=contexto_desc,
+        texto=texto_recortado,
+    )
+
+    return _generar_texto(prompt)

@@ -90,4 +90,25 @@ urlpatterns = [
     path('asistencia-familiar/pdf/',
          views.exportar_liquidacion_pdf,
          name='exportar_liquidacion_pdf'),
-]
+
+     # Jurisprudencia — rutas adicionales (la ruta 'jurisprudencia_asistente' ya existe)
+     path('jurisprudencia/guardar-precedente/',
+          views.guardar_precedente_desde_busqueda,
+          name='guardar_precedente_desde_busqueda'),
+
+     path('jurisprudencia/eliminar/<int:pk>/',
+          views.eliminar_precedente,
+          name='eliminar_precedente'), 
+
+     # Chatbot jurídico
+     path('api/chatbot/', views.api_chatbot, name='api_chatbot'),  
+
+     # Asistente IA por expediente
+     path('expediente/<int:pk>/asistente-ia/', views.api_asistente_expediente, name='api_asistente_expediente'),
+
+     path('api/idioma-nativo/', views.api_explicar_idioma_nativo, name='api_idioma_nativo'),
+
+     path('beneficios-sociales/', views.calculadora_beneficios_sociales, name='calculadora_beneficios_sociales'),
+
+     path('beneficios-sociales/pdf/', views.exportar_prefiniquito_pdf, name='exportar_prefiniquito_pdf'),
+     ]

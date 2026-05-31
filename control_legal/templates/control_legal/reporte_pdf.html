@@ -1,142 +1,370 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Informe Ejecutivo — LexNova Bolivia</title>
     <style>
-        @page {
-            size: letter;
-            margin: 2cm 1.5cm;
-        }
-        body {
-            font-family: Helvetica, Arial, sans-serif;
-            font-size: 11px;
-            color: #222;
-        }
+        @page { size: letter; margin: 1.8cm 1.6cm; }
+        * { margin: 0; padding: 0; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 9.5pt; color: #1a2744; }
 
-        /* Encabezado del documento */
-        .encabezado {
-            text-align: center;
-            border-bottom: 2px solid #1a2744;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
-        }
-        .encabezado .nombre-bufete {
-            font-size: 16px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #1a2744;
-        }
-        .encabezado .subtitulo {
-            font-size: 11px;
-            color: #555;
-            margin-top: 3px;
-        }
-        .encabezado .fecha {
-            font-size: 10px;
-            color: #888;
-            margin-top: 4px;
-        }
+        .cover-header { background-color: #1a2744; padding: 18mm 14mm 10mm 14mm; }
+        .cover-brand  { font-size: 9pt; color: #93b4e8; text-transform: uppercase; margin-bottom: 8mm; }
+        .cover-title  { font-size: 28pt; font-weight: bold; color: #ffffff; line-height: 1.15; margin-bottom: 4mm; }
+        .cover-subtitle { font-size: 12pt; color: #93b4e8; margin-bottom: 14mm; }
+        .cover-line   { border-top: 2px solid #2e59a7; margin-bottom: 8mm; }
+        .cover-meta   { font-size: 9pt; color: #b8cfe8; line-height: 2; }
+        .cover-footer-bar { background-color: #2e59a7; padding: 4mm 14mm; }
+        .cover-footer-bar-txt { font-size: 8pt; color: #ddeeff; }
 
-        /* Tabla */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-        }
-        thead th {
-            background-color: #1a2744;
-            color: white;
-            padding: 9px 10px;
-            text-align: left;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-        }
-        tbody td {
-            padding: 8px 10px;
-            border-bottom: 1px solid #e0e0e0;
-            vertical-align: middle;
-        }
-        tbody tr:nth-child(even) {
-            background-color: #f7f9fc;
-        }
+        .sec-bar { background-color: #1a2744; padding: 3mm 4mm; margin-top: 7mm; margin-bottom: 4mm; }
+        .sec-bar-title { font-size: 9pt; font-weight: bold; color: #ffffff; text-transform: uppercase; }
+        .sec-bar-sub   { font-size: 7.5pt; color: #93b4e8; margin-top: 1mm; }
 
-        /* Badge de estado */
-        .estado-activo  { color: #1a7a3c; font-weight: bold; }
-        .estado-tramite { color: #a05e00; font-weight: bold; }
+        .kpi-table { width: 100%; border-collapse: collapse; margin-bottom: 3mm; }
+        .kpi-table td { width: 25%; padding: 1.5mm; vertical-align: top; }
+        .kpi-card { background-color: #f4f6fb; border-top: 3px solid #2e59a7; padding: 4mm 3mm 3mm; }
+        .kpi-num   { font-size: 20pt; font-weight: bold; color: #1a2744; }
+        .kpi-label { font-size: 6.5pt; color: #6c7a99; text-transform: uppercase; margin-top: 1.5mm; }
+        .kpi-sub   { font-size: 7.5pt; color: #2e59a7; margin-top: 1mm; font-weight: bold; }
 
-        /* Pie de página */
-        .footer {
-            margin-top: 24px;
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 10px;
-            color: #888;
-            font-style: italic;
+        .data-table { width: 100%; border-collapse: collapse; font-size: 8pt; margin-top: 2mm; }
+        .data-table thead th {
+            background-color: #1a2744; color: #ffffff;
+            padding: 3mm 2.5mm; text-align: left;
+            font-size: 7pt; text-transform: uppercase;
         }
-        .total {
-            margin-top: 12px;
-            text-align: right;
-            font-size: 11px;
-            font-weight: bold;
-            color: #1a2744;
-        }
+        .data-table tbody td { padding: 2.5mm; border-bottom: 1px solid #e8edf5; vertical-align: top; }
+        .data-table tbody tr.fila-par td { background-color: #f8f9fc; }
+
+        .badge-activo    { color: #065f46; font-weight: bold; }
+        .badge-concluido { color: #3730a3; font-weight: bold; }
+        .badge-archivado { color: #475569; font-weight: bold; }
+        .badge-abandono  { color: #92400e; font-weight: bold; }
+        .badge-alta  { color: #991b1b; font-weight: bold; }
+        .badge-media { color: #92400e; font-weight: bold; }
+        .badge-baja  { color: #166534; font-weight: bold; }
+        .alerta    { color: #dc2626; font-weight: bold; }
+        .text-muted { color: #6c7a99; }
+        .materia-label { font-size: 7pt; font-weight: bold; color: #1d4ed8; }
+
+        .col-left  { float: left;  width: 48%; }
+        .col-right { float: right; width: 48%; }
+        .clearfix  { clear: both; }
+
+        .bar-table { width: 100%; border-collapse: collapse; }
+        .bar-table td { padding: 1.5mm 0; vertical-align: middle; font-size: 8pt; }
+        .bar-label     { width: 30%; color: #1a2744; font-weight: bold; }
+        .bar-track-td  { width: 58%; padding-left: 2mm; }
+        .bar-track-out { width: 100%; border-collapse: collapse; }
+        .bar-track-in  { border-collapse: collapse; height: 5mm; }
+        .bar-outer-td  { background-color: #e8edf5; height: 5mm; padding: 0; }
+        .bar-inner-td  { background-color: #2e59a7; height: 5mm; padding: 0; }
+        .bar-inner-verde { background-color: #16a34a; }
+        .bar-val { width: 12%; text-align: right; color: #2e59a7; font-weight: bold; padding-left: 2mm; }
+
+        .estado-table { width: 100%; border-collapse: collapse; }
+        .estado-table td { padding: 2mm 1mm; font-size: 8pt; vertical-align: middle; }
+        .pct-outer { background-color: #e8edf5; height: 4mm; padding: 0; }
+        .pct-inner { height: 4mm; padding: 0; }
+
+        .page-header-inner { border-bottom: 1.5px solid #e2e6ef; padding-bottom: 3mm; margin-bottom: 3mm; overflow: hidden; }
+        .ph-brand { font-size: 8pt; font-weight: bold; color: #2e59a7; }
+        .ph-doc   { font-size: 7pt; color: #6c7a99; }
+        .page-footer-inner { border-top: 1px solid #e2e6ef; padding-top: 3mm; margin-top: 6mm; overflow: hidden; font-size: 7pt; color: #6c7a99; }
+
+        .page-break { page-break-before: always; }
+        .no-break   { page-break-inside: avoid; }
+
+        .firma-table { width: 100%; border-collapse: collapse; margin-top: 14mm; }
+        .firma-table td { width: 50%; text-align: center; padding: 0 8mm; }
+        .firma-linea { border-top: 1px solid #1a2744; padding-top: 3mm; font-size: 8pt; }
     </style>
 </head>
 <body>
 
-    <!-- Encabezado -->
-    <div class="encabezado">
-        <div class="nombre-bufete">LexNova Bolivia</div>
-        <div class="subtitulo">Reporte de procesos activos</div>
-        <div class="fecha">Generado el {{ fecha|date:"d \d\e F \d\e Y" }} a las {{ fecha|date:"H:i" }}</div>
+<!-- PORTADA -->
+<div class="cover-header">
+    <div class="cover-brand">LexNova Bolivia &nbsp;&#183;&nbsp; Sistema Legal Digital</div>
+    <div class="cover-title">Informe<br>Ejecutivo<br>del Bufete</div>
+    <div class="cover-subtitle">Reporte de Gestion Legal Integral</div>
+    <div class="cover-line"></div>
+    <div class="cover-meta">
+        <b style="color:#fff;">Periodo:</b> {{ hoy|date:"F Y" }}<br>
+        <b style="color:#fff;">Generado:</b> {{ fecha|date:"d \d\e F \d\e Y" }} &#8212; {{ fecha|date:"H:i" }}<br>
+        <b style="color:#fff;">Generado por:</b> {{ generador }}<br>
+        <b style="color:#fff;">Clasificacion:</b> Confidencial &#8212; Uso interno del bufete
     </div>
+</div>
+<div class="cover-footer-bar">
+    <div class="cover-footer-bar-txt">LexNova Bolivia &#183; Despacho Juridico Digital &#183; Informe Ejecutivo {{ fecha|date:"Y" }}</div>
+</div>
 
-    <!-- Tabla de casos -->
-    <table>
-        <thead>
-            <tr>
-                <th>NUREJ</th>
-                <th>Cliente</th>
-                <th>Materia</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for caso in casos %}
-            <tr>
-                <td>{{ caso.nurej }}</td>
-                <td>{{ caso.cliente }}</td>
-                <td>{{ caso.materia }}</td>
-                <td>
-                    {% if caso.activo %}
-                        <span class="estado-activo">Activo</span>
-                    {% else %}
-                        <span class="estado-tramite">En trámite</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4" style="text-align:center;color:#888;padding:20px;">
-                    No hay casos registrados.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+
+<!-- PAGINA 2: KPIs -->
+<div class="page-break">
+<div class="page-header-inner">
+    <div style="float:left;"><div class="ph-brand">LEXNOVA BOLIVIA</div><div class="ph-doc">Informe Ejecutivo &#183; {{ fecha|date:"F Y" }}</div></div>
+    <div style="float:right; text-align:right;"><div class="ph-doc">Resumen Ejecutivo &#8212; Pagina 1 de 3</div></div>
+    <div class="clearfix"></div>
+</div>
+
+<div class="sec-bar">
+    <div class="sec-bar-title">Indicadores Clave del Bufete</div>
+    <div class="sec-bar-sub">Estado general al {{ hoy|date:"d/m/Y" }}</div>
+</div>
+
+<table class="kpi-table">
+<tr>
+    <td><div class="kpi-card"><div class="kpi-num">{{ total_expedientes }}</div><div class="kpi-label">Expedientes totales</div><div class="kpi-sub">+{{ nuevos_mes }} este mes</div></div></td>
+    <td><div class="kpi-card" style="border-top-color:#16a34a;"><div class="kpi-num">{{ total_activos }}</div><div class="kpi-label">Expedientes activos</div><div class="kpi-sub">En curso</div></div></td>
+    <td><div class="kpi-card"><div class="kpi-num">{{ total_clientes }}</div><div class="kpi-label">Clientes registrados</div><div class="kpi-sub">+{{ nuevos_clientes }} este mes</div></div></td>
+    <td><div class="kpi-card" style="border-top-color:#dc2626;"><div class="kpi-num">{{ tareas_vencidas }}</div><div class="kpi-label">Tareas vencidas</div><div class="kpi-sub" style="color:#dc2626;">Atencion urgente</div></div></td>
+</tr>
+</table>
+<table class="kpi-table">
+<tr>
+    <td><div class="kpi-card" style="border-top-color:#d97706;"><div class="kpi-num">{{ tareas_pendientes }}</div><div class="kpi-label">Tareas pendientes</div><div class="kpi-sub" style="color:#d97706;">Sin iniciar</div></div></td>
+    <td><div class="kpi-card"><div class="kpi-num">{{ audiencias_mes }}</div><div class="kpi-label">Audiencias este mes</div><div class="kpi-sub">Agendadas</div></div></td>
+    <td><div class="kpi-card" style="border-top-color:#7c3aed;"><div class="kpi-num">{{ total_contratos }}</div><div class="kpi-label">Contratos con IA</div><div class="kpi-sub" style="color:#7c3aed;">+{{ contratos_mes }} este mes</div></div></td>
+    <td><div class="kpi-card" style="border-top-color:#7c3aed;"><div class="kpi-num">{{ total_memoriales }}</div><div class="kpi-label">Memoriales con IA</div><div class="kpi-sub" style="color:#7c3aed;">+{{ memoriales_mes }} este mes</div></div></td>
+</tr>
+</table>
+
+<!-- Estados + Tareas -->
+<div style="overflow:hidden; margin-bottom:4mm;">
+<div class="col-left">
+    <div class="sec-bar"><div class="sec-bar-title">Estado de Expedientes</div></div>
+    <table class="estado-table">
+        <tr>
+            <td>&#9679; <span class="badge-activo">Activos</span></td>
+            <td style="text-align:right; width:10mm; font-weight:bold;">{{ total_activos }}</td>
+            <td style="width:32mm; padding-left:2mm;">
+                <table class="bar-track-out"><tr><td class="bar-outer-td">
+                    <table class="bar-track-in" style="width:{{ pct_activo }}%;"><tr><td style="background-color:#16a34a; height:4mm; padding:0;"></td></tr></table>
+                </td></tr></table>
+            </td>
+            <td style="text-align:right; font-size:7pt; color:#16a34a; width:9mm;">{{ pct_activo }}%</td>
+        </tr>
+        <tr>
+            <td>&#9679; <span class="badge-concluido">Concluidos</span></td>
+            <td style="text-align:right; font-weight:bold;">{{ total_concluidos }}</td>
+            <td style="padding-left:2mm;">
+                <table class="bar-track-out"><tr><td class="bar-outer-td">
+                    <table class="bar-track-in" style="width:{{ pct_concluido }}%;"><tr><td style="background-color:#2e59a7; height:4mm; padding:0;"></td></tr></table>
+                </td></tr></table>
+            </td>
+            <td style="text-align:right; font-size:7pt; color:#2e59a7;">{{ pct_concluido }}%</td>
+        </tr>
+        <tr>
+            <td>&#9679; <span class="badge-archivado">Archivados</span></td>
+            <td style="text-align:right; font-weight:bold;">{{ total_archivados }}</td>
+            <td style="padding-left:2mm;">
+                <table class="bar-track-out"><tr><td class="bar-outer-td">
+                    <table class="bar-track-in" style="width:{{ pct_archivado }}%;"><tr><td style="background-color:#6c7a99; height:4mm; padding:0;"></td></tr></table>
+                </td></tr></table>
+            </td>
+            <td style="text-align:right; font-size:7pt; color:#6c7a99;">{{ pct_archivado }}%</td>
+        </tr>
+        <tr>
+            <td>&#9679; <span class="badge-abandono">Abandono</span></td>
+            <td style="text-align:right; font-weight:bold;">{{ total_abandono }}</td>
+            <td style="padding-left:2mm;">
+                <table class="bar-track-out"><tr><td class="bar-outer-td">
+                    <table class="bar-track-in" style="width:{{ pct_abandono }}%;"><tr><td style="background-color:#d97706; height:4mm; padding:0;"></td></tr></table>
+                </td></tr></table>
+            </td>
+            <td style="text-align:right; font-size:7pt; color:#d97706;">{{ pct_abandono }}%</td>
+        </tr>
     </table>
+    {% if sin_abogado %}<p style="font-size:8pt; color:#dc2626; margin-top:3mm;">&#9888; {{ sin_abogado }} expediente{{ sin_abogado|pluralize }} sin abogado asignado.</p>{% endif %}
+</div>
+<div class="col-right">
+    <div class="sec-bar"><div class="sec-bar-title">Control de Tareas</div></div>
+    <table class="estado-table">
+        <tr><td>&#9679; Pendientes</td><td style="text-align:right; font-weight:bold;">{{ tareas_pendientes }}</td></tr>
+        <tr><td>&#9679; En proceso</td><td style="text-align:right; font-weight:bold;">{{ tareas_en_proceso }}</td></tr>
+        <tr><td>&#9679; Completadas</td><td style="text-align:right; font-weight:bold; color:#16a34a;">{{ tareas_completadas }}</td></tr>
+        <tr><td class="alerta">&#9888; Vencidas</td><td style="text-align:right;" class="alerta">{{ tareas_vencidas }}</td></tr>
+    </table>
+    <div class="sec-bar" style="margin-top:5mm;"><div class="sec-bar-title">Produccion con IA</div></div>
+    <table class="estado-table">
+        <tr><td>Contratos generados</td><td style="text-align:right; font-weight:bold;">{{ total_contratos }}</td></tr>
+        <tr><td>Memoriales generados</td><td style="text-align:right; font-weight:bold;">{{ total_memoriales }}</td></tr>
+        <tr><td>Contratos este mes</td><td style="text-align:right; font-weight:bold; color:#7c3aed;">+{{ contratos_mes }}</td></tr>
+        <tr><td>Memoriales este mes</td><td style="text-align:right; font-weight:bold; color:#7c3aed;">+{{ memoriales_mes }}</td></tr>
+    </table>
+</div>
+<div class="clearfix"></div>
+</div>
 
-    <!-- Total -->
-    <div class="total">Total de casos: {{ casos|length }}</div>
+<div class="page-footer-inner">
+    <div style="float:left;">LexNova Bolivia &#183; Informe Ejecutivo &#183; Confidencial</div>
+    <div style="float:right;">Generado por {{ generador }} &#183; {{ fecha|date:"d/m/Y H:i" }}</div>
+    <div class="clearfix"></div>
+</div>
+</div>
 
-    <!-- Pie -->
-    <div class="footer">
-        <span>LexNova Bolivia — Sistema de Gestión Legal</span>
-        <span>Generado por: {{ usuario_nombre }}</span>
-    </div>
+
+<!-- PAGINA 3: MATERIA, ABOGADO, AUDIENCIAS, TAREAS -->
+<div class="page-break">
+<div class="page-header-inner">
+    <div style="float:left;"><div class="ph-brand">LEXNOVA BOLIVIA</div><div class="ph-doc">Informe Ejecutivo &#183; {{ fecha|date:"F Y" }}</div></div>
+    <div style="float:right; text-align:right;"><div class="ph-doc">Analisis &#8212; Pagina 2 de 3</div></div>
+    <div class="clearfix"></div>
+</div>
+
+<div style="overflow:hidden; margin-bottom:4mm;" class="no-break">
+<div class="col-left">
+    <div class="sec-bar"><div class="sec-bar-title">Expedientes por Materia</div></div>
+    {% if materias_grafico %}
+    <table class="bar-table">
+        {% for m in materias_grafico %}
+        <tr>
+            <td class="bar-label">{{ m.materia }}</td>
+            <td class="bar-track-td">
+                <table class="bar-track-out"><tr><td class="bar-outer-td">
+                    <table class="bar-track-in" style="width:{{ m.pct }}%;"><tr><td class="bar-inner-td"></td></tr></table>
+                </td></tr></table>
+            </td>
+            <td class="bar-val">{{ m.total }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}<p class="text-muted" style="font-size:8pt; margin-top:3mm;">Sin datos.</p>{% endif %}
+</div>
+<div class="col-right">
+    <div class="sec-bar"><div class="sec-bar-title">Carga por Abogado</div></div>
+    {% if por_abogado_lista %}
+    <table class="bar-table">
+        {% for a in por_abogado_lista %}
+        <tr>
+            <td class="bar-label">{{ a.nombre|truncatechars:16 }}</td>
+            <td class="bar-track-td">
+                <table class="bar-track-out"><tr><td class="bar-outer-td">
+                    <table class="bar-track-in" style="width:{% widthratio a.total por_abogado_lista.0.total 100 %}%;"><tr><td class="bar-inner-td bar-inner-verde"></td></tr></table>
+                </td></tr></table>
+            </td>
+            <td class="bar-val" style="color:#16a34a;">{{ a.total }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}<p class="text-muted" style="font-size:8pt; margin-top:3mm;">Sin abogados asignados.</p>{% endif %}
+</div>
+<div class="clearfix"></div>
+</div>
+
+<div class="sec-bar no-break"><div class="sec-bar-title">Proximas Audiencias y Eventos Agendados</div></div>
+{% if proximas_audiencias %}
+<table class="data-table no-break">
+    <thead><tr>
+        <th style="width:14%;">Fecha</th>
+        <th style="width:24%;">Titulo</th>
+        <th style="width:24%;">Cliente</th>
+        <th style="width:16%;">Tipo</th>
+        <th style="width:22%;">Responsable</th>
+    </tr></thead>
+    <tbody>
+    {% for ev in proximas_audiencias %}
+    <tr class="{% cycle '' 'fila-par' %}">
+        <td><b>{{ ev.fecha_hora|date:"d/m/Y" }}</b><br><span class="text-muted">{{ ev.fecha_hora|date:"H:i" }}</span></td>
+        <td>{{ ev.titulo|truncatechars:28 }}</td>
+        <td>{% if ev.expediente %}{{ ev.expediente.cliente.nombre_completo|truncatechars:22 }}<br><span class="text-muted" style="font-size:7pt;">{{ ev.expediente.materia }}</span>{% else %}<span class="text-muted">&#8212;</span>{% endif %}</td>
+        <td>{{ ev.get_tipo_display }}</td>
+        <td>{{ ev.responsable.get_full_name|default:ev.responsable.username|truncatechars:18 }}{% if ev.lugar %}<br><span class="text-muted" style="font-size:7pt;">{{ ev.lugar|truncatechars:18 }}</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}<p class="text-muted" style="font-size:8.5pt; margin:3mm 0;">No hay audiencias proximas agendadas.</p>{% endif %}
+
+<div class="sec-bar no-break" style="margin-top:5mm;"><div class="sec-bar-title">Tareas Pendientes y En Proceso</div></div>
+{% if tareas_detalle %}
+<table class="data-table no-break">
+    <thead><tr>
+        <th style="width:30%;">Tarea</th>
+        <th style="width:22%;">Asignada a</th>
+        <th style="width:24%;">Expediente</th>
+        <th style="width:12%;">Prioridad</th>
+        <th style="width:12%;">Vence</th>
+    </tr></thead>
+    <tbody>
+    {% for t in tareas_detalle %}
+    <tr class="{% cycle '' 'fila-par' %}">
+        <td>{{ t.titulo|truncatechars:34 }}</td>
+        <td>{{ t.asignada_a.get_full_name|default:t.asignada_a.username|truncatechars:20 }}</td>
+        <td>{% if t.expediente %}{{ t.expediente.cliente.nombre_completo|truncatechars:22 }}{% else %}<span class="text-muted">&#8212;</span>{% endif %}</td>
+        <td>{% if t.prioridad == 'alta' %}<span class="badge-alta">Alta</span>{% elif t.prioridad == 'media' %}<span class="badge-media">Media</span>{% else %}<span class="badge-baja">Baja</span>{% endif %}</td>
+        <td class="{% if t.esta_vencida %}alerta{% endif %}">{{ t.fecha_limite|date:"d/m/Y" }}{% if t.esta_vencida %} &#9888;{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}<p style="font-size:8.5pt; color:#16a34a; margin:3mm 0;">Sin tareas pendientes. Todo al dia. &#10003;</p>{% endif %}
+
+<div class="page-footer-inner">
+    <div style="float:left;">LexNova Bolivia &#183; Informe Ejecutivo &#183; Confidencial</div>
+    <div style="float:right;">Pagina 2 de 3 &#183; {{ fecha|date:"d/m/Y" }}</div>
+    <div class="clearfix"></div>
+</div>
+</div>
+
+
+<!-- PAGINA 4: TABLA COMPLETA DE EXPEDIENTES -->
+<div class="page-break">
+<div class="page-header-inner">
+    <div style="float:left;"><div class="ph-brand">LEXNOVA BOLIVIA</div><div class="ph-doc">Informe Ejecutivo &#183; {{ fecha|date:"F Y" }}</div></div>
+    <div style="float:right; text-align:right;"><div class="ph-doc">Expedientes Activos &#8212; Pagina 3 de 3</div></div>
+    <div class="clearfix"></div>
+</div>
+
+<div class="sec-bar">
+    <div class="sec-bar-title">Expedientes Activos &#8212; Listado Completo</div>
+    <div class="sec-bar-sub">{{ total_activos }} expediente{{ total_activos|pluralize }} activo{{ total_activos|pluralize }} al {{ hoy|date:"d/m/Y" }}</div>
+</div>
+
+<table class="data-table">
+    <thead><tr>
+        <th style="width:5%;">#</th>
+        <th style="width:22%;">Cliente</th>
+        <th style="width:10%;">NUREJ</th>
+        <th style="width:10%;">Materia</th>
+        <th style="width:16%;">Tipo de proceso</th>
+        <th style="width:20%;">Abogado asignado</th>
+        <th style="width:9%;">Estado</th>
+        <th style="width:8%;">Inicio</th>
+    </tr></thead>
+    <tbody>
+    {% for caso in casos_tabla %}
+    <tr class="{% cycle '' 'fila-par' %}">
+        <td class="text-muted" style="font-size:7.5pt;">{{ forloop.counter }}</td>
+        <td><b>{{ caso.cliente.nombre_completo|truncatechars:22 }}</b><br><span class="text-muted" style="font-size:7pt;">CI: {{ caso.cliente.ci }}</span></td>
+        <td style="font-size:7.5pt;">{{ caso.nurej|default:'&#8212;' }}</td>
+        <td><span class="materia-label">{{ caso.materia }}</span></td>
+        <td style="font-size:7.5pt;">{{ caso.tipo_proceso|default:'&#8212;'|truncatechars:22 }}</td>
+        <td style="font-size:7.5pt;">{% if caso.abogado_asignado %}{{ caso.abogado_asignado.get_full_name|default:caso.abogado_asignado.username|truncatechars:20 }}{% else %}<span class="alerta">Sin asignar</span>{% endif %}</td>
+        <td>{% if caso.estado == 'activo' %}<span class="badge-activo">Activo</span>{% elif caso.estado == 'concluido' %}<span class="badge-concluido">Concluido</span>{% elif caso.estado == 'archivado' %}<span class="badge-archivado">Archivado</span>{% else %}<span class="badge-abandono">Abandono</span>{% endif %}</td>
+        <td style="font-size:7.5pt;" class="text-muted">{{ caso.fecha_inicio|date:"d/m/Y" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8" style="text-align:center; color:#6c7a99; padding:8mm;">No hay expedientes activos registrados.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<table class="firma-table">
+    <tr>
+        <td><div class="firma-linea">{{ generador }}<br><span class="text-muted">Generado por &#183; LexNova Bolivia</span></div></td>
+        <td><div class="firma-linea">&nbsp;<br><span class="text-muted">Revisado y aprobado por</span></div></td>
+    </tr>
+</table>
+
+<div class="page-footer-inner">
+    <div style="float:left;">LexNova Bolivia &#183; Informe Ejecutivo &#183; Confidencial &#183; {{ fecha|date:"Y" }}</div>
+    <div style="float:right;">Pagina 3 de 3 &#183; {{ fecha|date:"d/m/Y H:i" }}</div>
+    <div class="clearfix"></div>
+</div>
+</div>
 
 </body>
 </html>

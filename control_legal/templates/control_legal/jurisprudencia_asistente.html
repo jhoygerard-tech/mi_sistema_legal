@@ -1,247 +1,602 @@
 {% extends "base.html" %}
-{% block titulo %}Asistente de Jurisprudencia{% endblock %}
-{% block topbar_titulo %}Jurisprudencia — LexNova{% endblock %}
+{% block titulo %}Centro de Jurisprudencia — LexNova{% endblock %}
+{% block topbar_titulo %}Jurisprudencia{% endblock %}
+
+{% block estilos_extra %}
+<style>
+  .modo-tab { cursor:pointer; padding:8px 18px; border-radius:24px; font-size:.82rem; font-weight:600;
+              border:1.5px solid #e2e6ef; background:#fff; color:#6c757d;
+              text-decoration:none; transition:all .18s; white-space:nowrap; }
+  .modo-tab.activo, .modo-tab:hover { background:#1a2744; color:#fff; border-color:#1a2744; }
+  .modo-tab .badge-modo { display:inline-flex; width:20px; height:20px; border-radius:50%;
+                          align-items:center; justify-content:center; font-size:.7rem;
+                          font-weight:800; margin-right:5px; }
+  .panel-modo { display:none; }
+  .panel-modo.visible { display:block; }
+  .resultado-ia { white-space:pre-wrap; font-size:.9rem; line-height:1.7;
+                  max-height:500px; overflow-y:auto; }
+  .fuente-chip { font-size:.72rem; padding:2px 8px; border-radius:10px; border:1px solid #c7d2fe;
+                 background:#eef2ff; color:#3730a3; font-weight:600; }
+  .prec-row:hover { background:#f8f9fc; }
+  .pill-tipo { font-size:.7rem; padding:2px 7px; border-radius:8px; font-weight:700;
+               background:#dbeafe; color:#1d4ed8; }
+  .resultado-busqueda-card { border:1px solid #e2e6ef; border-radius:10px; padding:14px 16px;
+                              margin-bottom:10px; background:#fff; }
+  .resultado-busqueda-card:hover { box-shadow:0 2px 12px rgba(0,0,0,.08); }
+</style>
+{% endblock %}
 
 {% block contenido %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- Encabezado -->
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
     <div>
-        <h5 class="fw-bold mb-0">Centro de Jurisprudencia</h5>
-        <small class="text-muted">Estrategia con IA · Banco de precedentes · Bot TCP</small>
+        <h5 class="fw-bold mb-0" style="color:#1a2744;">
+            <i class="bi bi-bank me-2 text-primary"></i>Centro de Jurisprudencia
+        </h5>
+        <small class="text-muted">
+            IA con búsqueda web · Banco de precedentes · Análisis de sentencias
+        </small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted" style="font-size:.8rem;">
+            <i class="bi bi-database me-1"></i>
+            {{ precedentes_banco|length }} sentencia{{ precedentes_banco|length|pluralize }} en banco
+        </span>
     </div>
 </div>
 
+<!-- Error general -->
 {% if error %}
-<div class="alert alert-danger">
+<div class="alert alert-danger border-0 shadow-sm mb-3" style="border-radius:10px;">
     <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
 </div>
 {% endif %}
 
-<div class="row g-4">
+<!-- Tabs de modo -->
+<div class="d-flex gap-2 flex-wrap mb-4">
+    <a class="modo-tab activo" data-panel="panel-a" onclick="cambiarPanel(this,'panel-a')">
+        <span class="badge-modo" style="background:#2563eb; color:#fff;">A</span> Estrategia con IA
+    </a>
+    <a class="modo-tab" data-panel="panel-b" onclick="cambiarPanel(this,'panel-b')">
+        <span class="badge-modo" style="background:#16a34a; color:#fff;">B</span> Banco de precedentes
+    </a>
+    <a class="modo-tab" data-panel="panel-c" onclick="cambiarPanel(this,'panel-c')">
+        <span class="badge-modo" style="background:#dc2626; color:#fff;">C</span> Buscador multi-fuente
+    </a>
+    <a class="modo-tab" data-panel="panel-d" onclick="cambiarPanel(this,'panel-d')">
+        <span class="badge-modo" style="background:#7c3aed; color:#fff;">D</span> Analizar sentencia
+    </a>
+</div>
 
-    <!-- Opción A: Asistente de estrategia -->
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
-            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
-                <h6 class="fw-bold mb-0">
-                    <span class="badge bg-primary me-2">A</span> Asistente de Estrategia
-                </h6>
-            </div>
-            <div class="card-body p-4">
-                <form method="POST" id="form-estrategia">
-                    {% csrf_token %}
-                    <input type="hidden" name="opcion" value="estrategia">
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Materia</label>
-                        <select name="materia" id="estrategia-materia" class="form-select">
-                            <option value="">— Todas —</option>
-                            {% for val, label in materias %}
-                            <option value="{{ val }}" {% if post.materia == val %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Hechos del caso *</label>
-                        <textarea name="hechos_caso" id="estrategia-hechos" class="form-control" rows="5" required
-                            placeholder="Describe los hechos relevantes del expediente...">{{ post.hechos_caso }}</textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Petición / objetivo</label>
-                        <textarea name="peticion" id="estrategia-peticion" class="form-control" rows="2"
-                            placeholder="Ej: obtener amparo constitucional por debido proceso">{{ post.peticion }}</textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Buscar precedentes locales (opcional)</label>
-                        <input type="text" name="termino_precedentes" id="estrategia-precedentes" class="form-control"
-                            placeholder="Palabra clave o número de sentencia"
-                            value="{{ post.termino_precedentes }}">
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-lightbulb me-1"></i> Generar estrategia
-                    </button>
-                </form>
-
-                {% if estrategia %}
-                <div class="mt-4" id="bloque-estrategia-resultado">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small fw-semibold">Estrategia generada</span>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-limpiar-estrategia"
-                            onclick="limpiarConsultaEstrategia()" title="Reiniciar el asistente de estrategia">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar Consulta
-                        </button>
-                    </div>
-                    <div id="estrategia-texto" class="p-3 bg-light rounded border"
-                        style="white-space:pre-wrap;font-size:.9rem;max-height:400px;overflow-y:auto;">{{ estrategia }}</div>
+<!-- ══════════════════════════════════════════════════════════
+     PANEL A — Asistente de Estrategia Legal
+     ══════════════════════════════════════════════════════════ -->
+<div id="panel-a" class="panel-modo visible">
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                    <h6 class="fw-bold mb-0" style="font-size:.85rem; color:#1a2744;">
+                        <i class="bi bi-lightbulb me-1 text-warning"></i> Datos del caso
+                    </h6>
+                    <small class="text-muted">La IA busca precedentes reales del TCP/TSJ en internet</small>
                 </div>
-                {% endif %}
+                <div class="card-body p-4">
+                    <form method="POST" id="form-estrategia">
+                        {% csrf_token %}
+                        <input type="hidden" name="opcion" value="estrategia">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:.82rem;">Materia</label>
+                            <select name="materia" class="form-select form-select-sm">
+                                <option value="">— Todas —</option>
+                                {% for val, label in materias %}
+                                <option value="{{ val }}" {% if post.materia == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:.82rem;">
+                                Hechos del caso <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="hechos_caso" class="form-control" rows="6" required
+                                placeholder="Describe los hechos: quiénes son las partes, qué ocurrió, qué derechos se vulneraron, en qué etapa procesal están...">{{ post.hechos_caso }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:.82rem;">Objetivo procesal</label>
+                            <textarea name="peticion" class="form-control" rows="2"
+                                placeholder="Ej: obtener nulidad del proceso por falta de notificación, interponer acción de amparo...">{{ post.peticion }}</textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-1"></i> Buscar precedentes y generar estrategia
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Opción C: Bot francotirador TCP -->
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100" style="border-radius:12px;">
-            <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
-                <h6 class="fw-bold mb-0">
-                    <span class="badge bg-danger me-2">C</span> Bot Francotirador TCP
-                </h6>
-            </div>
-            <div class="card-body p-4">
-                <p class="text-muted small mb-3">
-                    Ingresa el <strong>número de sentencia</strong> (ej. <code>0432/2020-S2</code>) o la
-                    <strong>URL completa</strong> de
-                    <a href="https://tcpbolivia.bo/" target="_blank" rel="noopener">tcpbolivia.bo</a>.
-                    Al extraer, se guarda automáticamente en el Banco de Precedentes (Opción B).
-                </p>
-                <form method="POST" id="form-extraccion-tcp">
-                    {% csrf_token %}
-                    <input type="hidden" name="opcion" value="extraccion_tcp">
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-secondary" style="font-size:.85rem;">Número o URL *</label>
-                        <input type="text" name="url_tcp" id="input-url-tcp" class="form-control" required
-                            placeholder="0546/2018-S1  o  https://tcpbolivia.bo/2023/07/30/..."
-                            value="{{ post.url_tcp }}">
-                    </div>
-
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-download me-1"></i> Extraer y guardar
+        <div class="col-lg-7">
+            {% if estrategia %}
+            <div class="card border-0 shadow-sm" style="border-radius:12px;">
+                <div class="card-header bg-white border-0 pt-3 pb-2 px-4 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0" style="font-size:.85rem; color:#1a2744;">
+                        <i class="bi bi-file-earmark-text me-1 text-success"></i> Estrategia generada
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="copiarTexto('estrategia-texto')">
+                            <i class="bi bi-clipboard me-1"></i> Copiar
                         </button>
-                        <button type="button" class="btn btn-outline-dark" id="btn-portal-tcp"
-                            onclick="abrirPortalTcpOficial()">
-                            <i class="bi bi-box-arrow-up-right me-1"></i> Ir al Portal Oficial del TCP
+                        <button class="btn btn-outline-danger btn-sm" onclick="limpiarPanel('form-estrategia','estrategia-resultado')">
+                            <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
-                </form>
-
-                {% if precedente_extraido %}
-                {% if extraido_fuente_alternativa %}
-                <div class="alert alert-warning mt-4 mb-2 py-2 small" role="alert">
-                    <i class="bi bi-exclamation-triangle me-1"></i>
-                    <strong>Extraído de fuente alternativa web.</strong> Por favor, verifique la exactitud legal.
                 </div>
-                {% endif %}
-                <div class="mt-2 alert alert-success mb-0">
-                    <strong>{{ precedente_extraido.numero_sentencia }}</strong><br>
-                    <small>{{ precedente_extraido.get_materia_display }} — {{ precedente_extraido.magistrado_relator|default:"Sin relator" }}</small>
-                    {% if precedente_extraido.ratio_decidendi %}
-                    <p class="mb-0 mt-2 small">{{ precedente_extraido.ratio_decidendi|truncatechars:300 }}</p>
-                    {% endif %}
+                <div class="card-body p-4" id="estrategia-resultado">
+                    <div id="estrategia-texto" class="resultado-ia p-3 bg-light rounded">{{ estrategia }}</div>
                 </div>
-                {% endif %}
             </div>
+            {% else %}
+            <div class="card border-0 shadow-sm h-100 d-flex align-items-center justify-content-center"
+                 style="border-radius:12px; min-height:300px; background:#fafbfc;">
+                <div class="text-center text-muted p-5">
+                    <i class="bi bi-lightbulb fs-1 d-block mb-3 opacity-20"></i>
+                    <p class="mb-0" style="font-size:.9rem;">
+                        Completa los datos del caso y la IA buscará precedentes reales<br>
+                        del TCP y TSJ de Bolivia en múltiples fuentes legales.
+                    </p>
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                        <span class="fuente-chip">tcpbolivia.bo</span>
+                        <span class="fuente-chip">lexivox.org</span>
+                        <span class="fuente-chip">jurisprudencia.bo</span>
+                        <span class="fuente-chip">tsj.bo</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
+</div>
 
-    <!-- Opción B: Banco de precedentes propio -->
-    <div class="col-12">
-        <div class="card border-0 shadow-sm" style="border-radius:12px;">
-            <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h6 class="fw-bold mb-0">
-                    <span class="badge bg-success me-2">B</span> Banco de Precedentes Propio
-                </h6>
-                <form method="GET" class="d-flex gap-2 flex-wrap">
-                    <input type="text" name="buscar" class="form-control form-control-sm"
-                        placeholder="Buscar..." value="{{ buscar }}" style="min-width:180px;">
-                    <select name="materia" class="form-select form-select-sm" style="width:auto;">
-                        <option value="">Todas las materias</option>
+
+<!-- ══════════════════════════════════════════════════════════
+     PANEL B — Banco de Precedentes
+     ══════════════════════════════════════════════════════════ -->
+<div id="panel-b" class="panel-modo">
+    <!-- Buscador en banco -->
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+        <div class="card-body p-3">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="buscar" value="{{ buscar }}"
+                               class="form-control border-start-0"
+                               placeholder="Número, palabras clave, relator…">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="materia" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">— Todas las materias —</option>
                         {% for val, label in materias %}
                         <option value="{{ val }}" {% if materia_filtro == val %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
-                    <button type="submit" class="btn btn-sm btn-outline-secondary">Filtrar</button>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Filtrar</button>
+                </div>
+                {% if buscar or materia_filtro %}
+                <div class="col-md-2">
+                    <a href="{% url 'jurisprudencia_asistente' %}" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="bi bi-x-lg me-1"></i>Limpiar
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+
+            <!-- Búsqueda libre con IA -->
+            <form method="POST" class="row g-2 mt-2 pt-2 border-top align-items-end">
+                {% csrf_token %}
+                <input type="hidden" name="opcion" value="busqueda_libre">
+                <div class="col-md-5">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text" style="background:#eef2ff; border-color:#c7d2fe;">
+                            <i class="bi bi-robot text-primary"></i>
+                        </span>
+                        <input type="text" name="termino_libre" class="form-control"
+                               placeholder="Buscar en internet con IA: ej 'nulidad por falta de notificación'">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="materia_libre" class="form-select form-select-sm">
+                        <option value="">— Materia —</option>
+                        {% for val, label in materias %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-globe me-1"></i> Buscar en fuentes web
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resultados de búsqueda libre con IA -->
+    {% if resultados_busqueda %}
+    <div class="mb-3">
+        <h6 class="fw-semibold mb-2" style="font-size:.82rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d;">
+            <i class="bi bi-globe me-1 text-primary"></i> Resultados encontrados en internet
+        </h6>
+        {% for r in resultados_busqueda %}
+        <div class="resultado-busqueda-card">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <span class="fw-bold" style="color:#1a2744;">{{ r.numero_sentencia }}</span>
+                    <span class="pill-tipo ms-2">{{ r.tipo_resolucion|upper }}</span>
+                    <span class="text-muted ms-2" style="font-size:.8rem;">{{ r.fecha_resolucion }}</span>
+                </div>
+                <form method="POST" action="{% url 'guardar_precedente_desde_busqueda' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="numero_sentencia"    value="{{ r.numero_sentencia }}">
+                    <input type="hidden" name="tipo_resolucion"     value="{{ r.tipo_resolucion }}">
+                    <input type="hidden" name="tribunal"            value="{{ r.tribunal }}">
+                    <input type="hidden" name="magistrado_relator"  value="{{ r.magistrado_relator }}">
+                    <input type="hidden" name="fecha_resolucion"    value="{{ r.fecha_resolucion }}">
+                    <input type="hidden" name="materia"             value="{{ r.materia }}">
+                    <input type="hidden" name="ratio_decidendi"     value="{{ r.ratio_decidendi }}">
+                    <input type="hidden" name="resumen"             value="{{ r.resumen }}">
+                    <input type="hidden" name="palabras_clave"      value="{{ r.palabras_clave }}">
+                    <input type="hidden" name="url_fuente"          value="{{ r.url_fuente }}">
+                    <button type="submit" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-save me-1"></i> Guardar en banco
+                    </button>
                 </form>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Sentencia</th>
-                                <th>Materia</th>
-                                <th>Relator</th>
-                                <th>Fecha</th>
-                                <th>Origen</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for p in precedentes_banco %}
-                            <tr>
-                                <td class="fw-semibold">{{ p.numero_sentencia }}</td>
-                                <td>{{ p.get_materia_display }}</td>
-                                <td>{{ p.magistrado_relator|default:"—" }}</td>
-                                <td>{{ p.fecha_resolucion|date:"d/m/Y"|default:"—" }}</td>
-                                <td><span class="badge bg-secondary">{{ p.get_origen_display }}</span></td>
-                                <td>
-                                    {% if p.url_fuente %}
-                                    <a href="{{ p.url_fuente }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-box-arrow-up-right"></i>
-                                    </a>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
-                                    No hay precedentes. Usa el Bot TCP (Opción C) para importar sentencias.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            <p class="text-muted mb-1 mt-2" style="font-size:.82rem;">
+                <i class="bi bi-person me-1"></i>{{ r.magistrado_relator|default:'—' }}
+                &nbsp;·&nbsp; {{ r.materia }}
+            </p>
+            <p class="mb-0" style="font-size:.85rem;">{{ r.ratio_decidendi|truncatechars:200 }}</p>
+            {% if r.palabras_clave %}
+            <div class="mt-2">
+                {% for kw in r.palabras_clave.split|slice:":6" %}
+                <span class="fuente-chip me-1">{{ kw|cut:"," }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Tabla del banco local -->
+    <div class="card border-0 shadow-sm" style="border-radius:12px; overflow:hidden;">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:.875rem;">
+                <thead style="background:#f8f9fc; border-bottom:2px solid #e2e6ef;">
+                    <tr>
+                        <th class="ps-4 py-3" style="font-size:.72rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Sentencia</th>
+                        <th style="font-size:.72rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Materia</th>
+                        <th style="font-size:.72rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Magistrado relator</th>
+                        <th style="font-size:.72rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Fecha</th>
+                        <th style="font-size:.72rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Origen</th>
+                        <th class="text-center pe-4" style="font-size:.72rem; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; font-weight:600;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in precedentes_banco %}
+                    <tr class="prec-row">
+                        <td class="ps-4">
+                            <span class="fw-semibold" style="color:#1a2744;">{{ p.numero_sentencia }}</span>
+                            <span class="pill-tipo ms-1">{{ p.tipo_resolucion|upper }}</span>
+                            {% if p.ratio_decidendi %}
+                            <small class="d-block text-muted mt-1">{{ p.ratio_decidendi|truncatechars:60 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.get_materia_display }}</td>
+                        <td style="font-size:.83rem;">{{ p.magistrado_relator|default:'—'|truncatechars:25 }}</td>
+                        <td style="font-size:.83rem;">{{ p.fecha_resolucion|date:"d/m/Y"|default:'—' }}</td>
+                        <td>
+                            <span class="badge rounded-pill px-2"
+                                  style="background:#f1f5f9; color:#475569; font-size:.72rem;">
+                                {{ p.get_origen_display }}
+                            </span>
+                        </td>
+                        <td class="text-center pe-4">
+                            <div class="d-flex justify-content-center gap-1">
+                                {% if p.url_fuente %}
+                                <a href="{{ p.url_fuente }}" target="_blank" rel="noopener"
+                                   class="btn btn-sm btn-outline-primary px-2" title="Ver fuente original">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'eliminar_precedente' p.pk %}"
+                                   class="btn btn-sm btn-outline-danger px-2" title="Eliminar del banco"
+                                   onclick="return confirm('¿Eliminar esta sentencia del banco?')">
+                                    <i class="bi bi-trash3"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="bi bi-journal-x fs-1 d-block mb-2 opacity-25"></i>
+                            No hay precedentes en el banco todavía.<br>
+                            <small>Usa el Buscador (C) para importar sentencias o la búsqueda web arriba.</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if precedentes_banco %}
+        <div class="px-4 py-2 border-top" style="background:#fafbfc; font-size:.8rem; color:#6c757d;">
+            <i class="bi bi-database me-1"></i> {{ precedentes_banco|length }} precedente{{ precedentes_banco|length|pluralize }} en el banco local
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     PANEL C — Buscador Multi-Fuente (reemplaza Bot TCP)
+     ══════════════════════════════════════════════════════════ -->
+<div id="panel-c" class="panel-modo">
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm" style="border-radius:12px;">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                    <h6 class="fw-bold mb-0" style="color:#1a2744;">
+                        <span class="badge bg-danger me-2">C</span> Buscador Multi-Fuente
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Info de fuentes -->
+                    <div class="p-3 mb-3 rounded" style="background:#fafbfc; border:1px solid #e2e6ef; font-size:.82rem;">
+                        <p class="fw-semibold mb-2" style="color:#1a2744;">
+                            <i class="bi bi-globe me-1 text-primary"></i> Fuentes consultadas automáticamente:
+                        </p>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span class="fuente-chip">tcpbolivia.bo</span>
+                            <span class="fuente-chip">lexivox.org</span>
+                            <span class="fuente-chip">jurisprudencia.bo</span>
+                            <span class="fuente-chip">tsj.bo</span>
+                            <span class="fuente-chip">gacetaoficial.bo</span>
+                            <span class="fuente-chip">repositorio.umsa.bo</span>
+                            <span class="fuente-chip">cedure.org.bo</span>
+                        </div>
+                        <p class="mt-2 mb-0 text-muted">
+                            Ya no dependemos solo de tcpbolivia.bo — si una fuente falla,
+                            la IA busca automáticamente en las demás.
+                        </p>
+                    </div>
+
+                    <form method="POST" id="form-extraccion">
+                        {% csrf_token %}
+                        <input type="hidden" name="opcion" value="extraccion_tcp">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:.82rem;">
+                                Número de sentencia <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="url_tcp" class="form-control" required
+                                   placeholder="Ej: SCP 0432/2020-S2  o  SCP 0217/2017"
+                                   value="{{ post.url_tcp }}">
+                            <div class="form-text">
+                                Formatos aceptados: <code>SCP 0432/2020-S2</code>, <code>AS 0123/2019</code>, <code>SC 0067/2015</code>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-search me-1"></i> Buscar y guardar en banco
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Resultado de extracción -->
+                    {% if precedente_extraido %}
+                    {% if extraido_fuente_alternativa %}
+                    <div class="alert alert-warning mt-3 mb-0 py-2" style="font-size:.82rem;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <strong>Encontrado en fuente alternativa.</strong> Verifica la exactitud antes de citar.
+                    </div>
+                    {% endif %}
+                    <div class="alert alert-success mt-3 mb-0" style="font-size:.88rem;">
+                        <i class="bi bi-check-circle me-1"></i>
+                        <strong>{{ precedente_extraido.numero_sentencia }}</strong> guardada en el banco.<br>
+                        <small class="text-muted">{{ precedente_extraido.get_materia_display }} · {{ precedente_extraido.magistrado_relator|default:'Sin relator' }}</small>
+                        {% if precedente_extraido.ratio_decidendi %}
+                        <p class="mb-0 mt-2" style="font-size:.82rem;">
+                            <strong>Ratio decidendi:</strong> {{ precedente_extraido.ratio_decidendi|truncatechars:250 }}
+                        </p>
+                        <div class="mt-2">
+                        {% include "control_legal/componentes/btn_idioma_nativo.html" with texto=precedente_extraido.ratio_decidendi contexto="jurisprudencia" %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:12px; background:#fafbfc;">
+                <div class="card-body p-4">
+                    <h6 class="fw-semibold mb-3" style="font-size:.82rem; color:#6c757d; text-transform:uppercase; letter-spacing:.6px;">
+                        <i class="bi bi-info-circle me-1"></i> Cómo funciona
+                    </h6>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex gap-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                 style="width:32px; height:32px; background:#dbeafe; color:#1d4ed8; font-weight:700; font-size:.9rem;">1</div>
+                            <div>
+                                <p class="fw-semibold mb-0" style="font-size:.88rem;">Ingresas el número de sentencia</p>
+                                <small class="text-muted">En cualquier formato: SCP, AS, SC, AC, DCP</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                 style="width:32px; height:32px; background:#dbeafe; color:#1d4ed8; font-weight:700; font-size:.9rem;">2</div>
+                            <div>
+                                <p class="fw-semibold mb-0" style="font-size:.88rem;">Gemini busca en 7 fuentes simultáneamente</p>
+                                <small class="text-muted">TCP, TSJ, Lexivox, UMSA, Gaceta Oficial y más</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                 style="width:32px; height:32px; background:#d1fae5; color:#065f46; font-weight:700; font-size:.9rem;">3</div>
+                            <div>
+                                <p class="fw-semibold mb-0" style="font-size:.88rem;">Extrae y guarda automáticamente</p>
+                                <small class="text-muted">Número, fecha, magistrado, ratio decidendi, palabras clave</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                 style="width:32px; height:32px; background:#d1fae5; color:#065f46; font-weight:700; font-size:.9rem;">4</div>
+                            <div>
+                                <p class="fw-semibold mb-0" style="font-size:.88rem;">Disponible en tu banco local</p>
+                                <small class="text-muted">Accesible offline para futuras consultas y estrategias</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
 </div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     PANEL D — Analizador de texto de sentencia
+     ══════════════════════════════════════════════════════════ -->
+<div id="panel-d" class="panel-modo">
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm" style="border-radius:12px;">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                    <h6 class="fw-bold mb-0" style="color:#1a2744;">
+                        <span class="badge me-2" style="background:#7c3aed;">D</span> Analizar texto de sentencia
+                    </h6>
+                    <small class="text-muted">Pega el texto de cualquier sentencia y la IA extrae los puntos clave</small>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="opcion" value="analizar_texto">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:.82rem;">
+                                Texto de la sentencia <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="texto_sentencia" class="form-control" rows="12" required
+                                placeholder="Pega aquí el texto completo o parcial de la sentencia copiado desde el portal del TCP, TSJ o cualquier fuente...">{{ post.texto_sentencia }}</textarea>
+                            <div class="form-text">Se analizarán los primeros 6.000 caracteres.</div>
+                        </div>
+
+                        <button type="submit" class="btn w-100 text-white" style="background:#7c3aed;">
+                            <i class="bi bi-cpu me-1"></i> Analizar con IA
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            {% if analisis_texto %}
+            <div class="card border-0 shadow-sm" style="border-radius:12px;">
+                <div class="card-header bg-white border-0 pt-3 pb-2 px-4 d-flex justify-content-between">
+                    <h6 class="fw-bold mb-0" style="font-size:.85rem; color:#1a2744;">
+                        <i class="bi bi-file-earmark-check me-1" style="color:#7c3aed;"></i> Análisis de la sentencia
+                    </h6>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="copiarTexto('analisis-texto')">
+                        <i class="bi bi-clipboard me-1"></i> Copiar
+                    </button>
+                </div>
+                <div class="card-body p-4">
+                    <div id="analisis-texto" class="resultado-ia p-3 bg-light rounded">{{ analisis_texto }}</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card border-0 shadow-sm h-100 d-flex align-items-center justify-content-center"
+                 style="border-radius:12px; background:#fafbfc; min-height:350px;">
+                <div class="text-center text-muted p-4">
+                    <i class="bi bi-file-earmark-text fs-1 d-block mb-3 opacity-20" style="color:#7c3aed;"></i>
+                    <p class="mb-1 fw-semibold">¿Tienes una sentencia en PDF o pantalla?</p>
+                    <p class="mb-0" style="font-size:.85rem;">
+                        Copia el texto y pégalo aquí. La IA identificará<br>
+                        el ratio decidendi, normas aplicadas y aplicabilidad práctica.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts_extra %}
 <script>
-const TCP_PORTAL_BASE = 'https://web.tcp.gob.bo';
+// ── Cambiar panel activo ──────────────────────────────────
+function cambiarPanel(tabEl, panelId) {
+    document.querySelectorAll('.modo-tab').forEach(t => t.classList.remove('activo'));
+    document.querySelectorAll('.panel-modo').forEach(p => p.classList.remove('visible'));
+    tabEl.classList.add('activo');
+    document.getElementById(panelId).classList.add('visible');
+    // Guardar en sessionStorage para mantener tab al recargar
+    sessionStorage.setItem('juri_panel', panelId);
+}
 
-function construirUrlPortalTcp(valor) {
-    valor = (valor || '').trim();
-    if (!valor) return TCP_PORTAL_BASE + '/';
-    if (/^https?:\/\//i.test(valor)) return valor;
-    const match = valor.match(/^(?:(?:SCP|SC|AS|AC|DCP)\s+)?(\d{1,4})\/(\d{4})(?:-(S\d+))?$/i);
-    if (match) {
-        let ref = match[1] + '/' + match[2];
-        if (match[3]) ref += '-' + match[3].toUpperCase();
-        return TCP_PORTAL_BASE + '/buscador?sentencia=' + encodeURIComponent(ref);
+// ── Restaurar panel al recargar ───────────────────────────
+(function() {
+    const saved = sessionStorage.getItem('juri_panel');
+    if (saved && document.getElementById(saved)) {
+        const tab = document.querySelector(`[data-panel="${saved}"]`);
+        if (tab) cambiarPanel(tab, saved);
     }
-    return TCP_PORTAL_BASE + '/buscador?sentencia=' + encodeURIComponent(valor);
+    // Si hay resultado activo, abrir el panel correspondiente
+    {% if estrategia %}        cambiarPanel(document.querySelector('[data-panel="panel-a"]'), 'panel-a'); {% endif %}
+    {% if precedente_extraido %}cambiarPanel(document.querySelector('[data-panel="panel-c"]'), 'panel-c'); {% endif %}
+    {% if analisis_texto %}     cambiarPanel(document.querySelector('[data-panel="panel-d"]'), 'panel-d'); {% endif %}
+    {% if resultados_busqueda %}cambiarPanel(document.querySelector('[data-panel="panel-b"]'), 'panel-b'); {% endif %}
+})();
+
+// ── Copiar texto al portapapeles ──────────────────────────
+function copiarTexto(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    navigator.clipboard.writeText(el.innerText).then(() => {
+        const btn = event.currentTarget;
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Copiado';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-secondary');
+        setTimeout(() => {
+            btn.innerHTML = orig;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    });
 }
 
-function abrirPortalTcpOficial() {
-    const input = document.getElementById('input-url-tcp');
-    const url = construirUrlPortalTcp(input ? input.value : '');
-    window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-function limpiarConsultaEstrategia() {
-    const bloque = document.getElementById('bloque-estrategia-resultado');
-    if (bloque) bloque.remove();
-
-    const materia = document.getElementById('estrategia-materia');
-    const hechos = document.getElementById('estrategia-hechos');
-    const peticion = document.getElementById('estrategia-peticion');
-    const precedentes = document.getElementById('estrategia-precedentes');
-
-    if (materia) materia.value = '';
-    if (hechos) hechos.value = '';
-    if (peticion) peticion.value = '';
-    if (precedentes) precedentes.value = '';
-
-    if (hechos) hechos.focus();
+// ── Limpiar panel ─────────────────────────────────────────
+function limpiarPanel(formId, resultadoId) {
+    const form = document.getElementById(formId);
+    const res  = document.getElementById(resultadoId);
+    if (form) form.reset();
+    if (res)  res.remove();
 }
 </script>
 {% endblock %}

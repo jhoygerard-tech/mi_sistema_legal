@@ -2,11 +2,210 @@
 {% block titulo %}Expediente — {{ expediente.nurej|default:expediente.pk }}{% endblock %}
 {% block topbar_titulo %}Expediente{% endblock %}
 
+{% block estilos_extra %}
+<style>
+/* Panel lateral del asistente */
+#asistente-panel {
+    position: fixed;
+    top: 0; right: -440px;
+    width: 420px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -6px 0 32px rgba(0,0,0,.13);
+    display: flex;
+    flex-direction: column;
+    z-index: 1050;
+    transition: right .3s cubic-bezier(.4,0,.2,1);
+}
+#asistente-panel.abierto { right: 0; }
+
+#asistente-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 1049;
+}
+#asistente-overlay.visible { display: block; }
+
+/* Header del panel */
+#asistente-header {
+    background: linear-gradient(135deg, #1a2744, #2d4a8a);
+    color: #fff;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+#asistente-header .avatar {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+#asistente-header .info { flex: 1; min-width: 0; }
+#asistente-header .info strong { display: block; font-size: .95rem; }
+#asistente-header .info small {
+    opacity: .75; font-size: .72rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: block;
+}
+#asistente-cerrar {
+    background: none; border: none; color: #fff;
+    font-size: 1.2rem; cursor: pointer; opacity: .8; padding: 2px;
+    flex-shrink: 0;
+}
+#asistente-cerrar:hover { opacity: 1; }
+
+/* Acciones rápidas */
+#asistente-acciones {
+    padding: 10px 14px;
+    border-bottom: 1px solid #e8ecf4;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    background: #f8f9fb;
+}
+.btn-accion-rapida {
+    font-size: .72rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid #c8d4f0;
+    background: #fff;
+    color: #1a2744;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+}
+.btn-accion-rapida:hover { background: #e8ecf4; }
+
+/* Mensajes */
+#asistente-mensajes {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f8f9fb;
+    min-height: 0;
+}
+.asis-msg {
+    max-width: 90%;
+    padding: 10px 13px;
+    border-radius: 12px;
+    font-size: .835rem;
+    line-height: 1.55;
+    word-wrap: break-word;
+}
+.asis-msg.bot {
+    background: #fff;
+    border: 1px solid #e2e8f4;
+    align-self: flex-start;
+    border-bottom-left-radius: 3px;
+}
+.asis-msg.user {
+    background: linear-gradient(135deg,#1a2744,#2d4a8a);
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 3px;
+}
+.asis-msg.typing {
+    background: #fff;
+    border: 1px solid #e2e8f4;
+    align-self: flex-start;
+    color: #6c757d;
+    font-style: italic;
+    font-size: .8rem;
+}
+
+/* Botón copiar en mensajes del bot */
+.btn-copiar-msg {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: .7rem;
+    color: #6c757d;
+    background: none;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 2px 8px;
+    cursor: pointer;
+}
+.btn-copiar-msg:hover { background: #f0f0f0; }
+
+/* Footer input */
+#asistente-footer {
+    padding: 12px;
+    border-top: 1px solid #e8ecf4;
+    background: #fff;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+#asistente-input {
+    flex: 1;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: .835rem;
+    resize: none;
+    min-height: 38px;
+    max-height: 110px;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.45;
+}
+#asistente-input:focus { border-color: #2d4a8a; }
+#asistente-send {
+    background: linear-gradient(135deg,#1a2744,#2d4a8a);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    width: 38px; height: 38px;
+    cursor: pointer;
+    font-size: 1rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#asistente-send:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Botón flotante del asistente en la página */
+#btn-abrir-asistente {
+    position: fixed;
+    bottom: 100px;
+    right: 28px;
+    z-index: 1040;
+}
+
+@media (max-width: 576px) {
+    #asistente-panel { width: 100vw; }
+    #btn-abrir-asistente { bottom: 90px; right: 14px; }
+}
+</style>
+{% endblock %}
+
 {% block contenido %}
+
+<!-- Cabecera del expediente -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
-        <h5 class="fw-bold mb-0">Expediente {{ expediente.nurej|default:expediente.numero_expediente|default:expediente.pk }}</h5>
-        <p class="text-muted mb-0" style="font-size:.9rem;">Cliente: {{ expediente.cliente.nombre_completo }}</p>
+        <h5 class="fw-bold mb-0">
+            Expediente {{ expediente.nurej|default:expediente.numero_expediente|default:expediente.pk }}
+        </h5>
+        <p class="text-muted mb-0" style="font-size:.9rem;">
+            Cliente: {{ expediente.cliente.nombre_completo }}
+            &nbsp;·&nbsp;
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                {{ expediente.materia }}
+            </span>
+        </p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
         <a href="{% url 'listar_casos' %}" class="btn btn-outline-secondary btn-sm">
@@ -16,27 +215,39 @@
             <i class="bi bi-people me-1"></i> Ver cliente
         </a>
         {% if mostrar_calculadora_familia %}
-        <a href="{% url 'calculadora_asistencia_expediente' expediente.pk %}?extraer_ia=1" class="btn btn-primary btn-sm">
+        <a href="{% url 'calculadora_asistencia_expediente' expediente.pk %}?extraer_ia=1"
+           class="btn btn-primary btn-sm">
             <i class="bi bi-calculator me-1"></i> Liquidación Asistencia (Ley 603)
         </a>
         {% endif %}
+        <!-- Botón Asistente IA -->
+        <button type="button" id="btn-asistente-header"
+                class="btn btn-sm"
+                style="background:linear-gradient(135deg,#1a2744,#2d4a8a);color:#fff;">
+            <i class="bi bi-robot me-1"></i> Asistente IA
+        </button>
     </div>
 </div>
 
 {% if mostrar_calculadora_familia %}
 <div class="alert alert-primary py-2 small mb-3">
     <i class="bi bi-heart me-1"></i>
-    Expediente de <strong>Familia</strong> — Use la
-    <a href="{% url 'calculadora_asistencia_expediente' expediente.pk %}" class="alert-link">Calculadora de Liquidación de Asistencia Familiar</a>
-    con extracción automática desde los documentos adjuntos.
+    Expediente de <strong>Familia</strong> — Usa la
+    <a href="{% url 'calculadora_asistencia_expediente' expediente.pk %}" class="alert-link">
+        Calculadora de Liquidación de Asistencia Familiar
+    </a> con extracción automática desde los documentos adjuntos.
 </div>
 {% endif %}
 
+<!-- Datos + subir documento -->
 <div class="row g-3 mb-4">
     <div class="col-lg-7">
         <div class="card border-0 shadow-sm" style="border-radius:12px;">
             <div class="card-body p-4">
-                <h6 class="mb-3">Detalles del expediente</h6>
+                <h6 class="mb-3 fw-bold">Detalles del expediente</h6>
+                <div class="mb-3 d-flex justify-content-end">
+                {% include "control_legal/componentes/btn_idioma_nativo.html" with texto=expediente.descripcion contexto="expediente" %}
+                </div>
                 <dl class="row mb-0">
                     <dt class="col-4 text-muted">NUREJ</dt>
                     <dd class="col-8">{{ expediente.nurej|default:'—' }}</dd>
@@ -51,7 +262,14 @@
                     <dt class="col-4 text-muted">Fecha inicio</dt>
                     <dd class="col-8">{{ expediente.fecha_inicio|date:'d/m/Y' }}</dd>
                     <dt class="col-4 text-muted">Estado</dt>
-                    <dd class="col-8">{{ expediente.get_estado_display }}</dd>
+                    <dd class="col-8">
+                        <span class="badge
+                            {% if expediente.estado == 'activo' %}bg-success-subtle text-success border border-success-subtle
+                            {% elif expediente.estado == 'concluido' %}bg-secondary-subtle text-secondary border border-secondary-subtle
+                            {% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
+                            {{ expediente.get_estado_display }}
+                        </span>
+                    </dd>
                     <dt class="col-4 text-muted">Descripción</dt>
                     <dd class="col-8">{{ expediente.descripcion|linebreaksbr|default:'—' }}</dd>
                 </dl>
@@ -61,7 +279,7 @@
     <div class="col-lg-5">
         <div class="card border-0 shadow-sm" style="border-radius:12px;">
             <div class="card-body p-4">
-                <h6 class="mb-3">Adjuntar documento</h6>
+                <h6 class="mb-3 fw-bold">Adjuntar documento</h6>
                 <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     <input type="hidden" name="subir_documento" value="1">
@@ -90,43 +308,59 @@
     </div>
 </div>
 
+<!-- Documentos -->
 <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
     <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0">Documentos adjuntos</h6>
-            <a href="{% url 'reporte_un_caso' expediente.pk %}" class="btn btn-sm btn-outline-danger">
+            <h6 class="mb-0 fw-bold">Documentos adjuntos</h6>
+            <a href="{% url 'reporte_un_caso' expediente.pk %}"
+               class="btn btn-sm btn-outline-danger">
                 <i class="bi bi-file-earmark-pdf me-1"></i> Reporte expediente
             </a>
         </div>
         {% if documentos %}
         <div class="list-group">
             {% for doc in documentos %}
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
                     <div class="fw-semibold">{{ doc.titulo }}</div>
                     <small class="text-muted">{{ doc.get_tipo_display }} — {{ doc.fecha_subida|date:'d/m/Y H:i' }}</small>
+                    {% if doc.descripcion %}
+                    <small class="d-block text-muted">{{ doc.descripcion }}</small>
+                    {% endif %}
                 </div>
+                <div class="d-flex gap-2 align-items-center">
+                {% include "control_legal/componentes/btn_idioma_nativo.html" with texto=doc.descripcion|default:doc.titulo contexto="documento" %}
                 <a href="{{ doc.archivo.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-box-arrow-up-right"></i>
                 </a>
             </div>
+        </div>
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-muted mb-0">No hay documentos. Suba resoluciones o liquidaciones para la extracción IA.</p>
+        <p class="text-muted mb-0 small">
+            No hay documentos. Suba resoluciones o liquidaciones para la extracción IA.
+        </p>
         {% endif %}
     </div>
 </div>
 
+<!-- Movimientos procesales -->
 {% if movimientos %}
-<div class="card border-0 shadow-sm" style="border-radius:12px;">
+<div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
     <div class="card-body p-4">
-        <h6 class="mb-3">Movimientos procesales</h6>
+        <h6 class="mb-3 fw-bold">Movimientos procesales</h6>
         <ul class="list-group list-group-flush">
             {% for m in movimientos %}
             <li class="list-group-item px-0">
-                <strong>{{ m.get_tipo_display }}</strong> — {{ m.fecha|date:'d/m/Y' }}<br>
-                <small>{{ m.descripcion }}</small>
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <strong>{{ m.get_tipo_display }}</strong> — {{ m.fecha|date:'d/m/Y' }}<br>
+                        <small>{{ m.descripcion }}</small>
+                    </div>
+                    {% include "control_legal/componentes/btn_idioma_nativo.html" with texto=m.descripcion contexto="movimiento" %}
+                </div>
             </li>
             {% endfor %}
         </ul>
@@ -134,44 +368,330 @@
 </div>
 {% endif %}
 
-<div class="card border-0 shadow-sm mt-4" style="border-radius:12px;">
-  <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
-    <h6 class="mb-0 fw-bold"><i class="bi bi-check2-square me-2"></i>Tareas del expediente</h6>
-    {% if request.user.perfil.rol != 'pasante' %}
-    <a href="{% url 'crear_tarea' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg me-1"></i> Nueva tarea</a>
-    {% endif %}
-  </div>
-  <div class="card-body px-4 pb-4">
-    {% if tareas_del_caso %}
-    <div class="list-group list-group-flush">
-      {% for t in tareas_del_caso %}
-      <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-          <a href="{% url 'detalle_tarea' t.pk %}" class="fw-semibold text-decoration-none text-dark">
-            {{ t.titulo }}{% if t.es_recurrente %} <i class="bi bi-arrow-repeat text-info ms-1"></i>{% endif %}
-          </a>
-          <small class="d-block text-muted">
-            <i class="bi bi-person me-1"></i>{{ t.asignada_a.get_full_name|default:t.asignada_a.username }}
-            &nbsp;·&nbsp;
-            <i class="bi bi-calendar3 me-1"></i>
-            <span class="{% if t.esta_vencida %}text-danger fw-bold{% endif %}">{{ t.fecha_limite|date:"d/m/Y" }}</span>
-          </small>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-          {% if t.prioridad == 'alta' %}<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Alta</span>
-          {% elif t.prioridad == 'media' %}<span class="badge bg-warning-subtle text-warning border border-warning-subtle">Media</span>
-          {% else %}<span class="badge bg-secondary-subtle text-secondary">Baja</span>{% endif %}
-          {% if t.estado == 'completada' %}<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Completada</span>
-          {% elif t.estado == 'en_proceso' %}<span class="badge bg-primary-subtle text-primary border border-primary-subtle">En proceso</span>
-          {% else %}<span class="badge bg-secondary-subtle text-secondary">Pendiente</span>{% endif %}
-          {% if t.comentarios.count > 0 %}<span class="badge bg-light text-muted border"><i class="bi bi-chat-text me-1"></i>{{ t.comentarios.count }}</span>{% endif %}
-        </div>
-      </div>
-      {% endfor %}
+<!-- Tareas -->
+<div class="card border-0 shadow-sm mt-2" style="border-radius:12px;">
+    <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-check2-square me-2"></i>Tareas del expediente</h6>
+        {% if request.user.perfil.rol != 'pasante' %}
+        <a href="{% url 'crear_tarea' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> Nueva tarea
+        </a>
+        {% endif %}
     </div>
-    {% else %}
-    <p class="text-muted text-center py-3 mb-0" style="font-size:.875rem;"><i class="bi bi-check2-square d-block fs-2 mb-1 opacity-25"></i>Sin tareas asignadas a este expediente.</p>
-    {% endif %}
-  </div>
+    <div class="card-body px-4 pb-4">
+        {% if tareas_del_caso %}
+        <div class="list-group list-group-flush">
+            {% for t in tareas_del_caso %}
+            <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <a href="{% url 'detalle_tarea' t.pk %}"
+                       class="fw-semibold text-decoration-none text-dark">
+                        {{ t.titulo }}
+                        {% if t.es_recurrente %}
+                        <i class="bi bi-arrow-repeat text-info ms-1"></i>
+                        {% endif %}
+                    </a>
+                    <small class="d-block text-muted">
+                        <i class="bi bi-person me-1"></i>
+                        {{ t.asignada_a.get_full_name|default:t.asignada_a.username }}
+                        &nbsp;·&nbsp;
+                        <i class="bi bi-calendar3 me-1"></i>
+                        <span class="{% if t.esta_vencida %}text-danger fw-bold{% endif %}">
+                            {{ t.fecha_limite|date:"d/m/Y" }}
+                        </span>
+                    </small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    {% if t.prioridad == 'alta' %}
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Alta</span>
+                    {% elif t.prioridad == 'media' %}
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Media</span>
+                    {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary">Baja</span>
+                    {% endif %}
+                    {% if t.estado == 'completada' %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                        <i class="bi bi-check-circle me-1"></i>Completada
+                    </span>
+                    {% elif t.estado == 'en_proceso' %}
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">En proceso</span>
+                    {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary">Pendiente</span>
+                    {% endif %}
+                    {% if t.comentarios.count > 0 %}
+                    <span class="badge bg-light text-muted border">
+                        <i class="bi bi-chat-text me-1"></i>{{ t.comentarios.count }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-3 mb-0" style="font-size:.875rem;">
+            <i class="bi bi-check2-square d-block fs-2 mb-1 opacity-25"></i>
+            Sin tareas asignadas a este expediente.
+        </p>
+        {% endif %}
+    </div>
 </div>
+
+<!-- Botón flotante Asistente IA -->
+<button id="btn-abrir-asistente"
+        class="btn btn-lg rounded-pill shadow"
+        style="background:linear-gradient(135deg,#1a2744,#2d4a8a);color:#fff;padding:.6rem 1.2rem;">
+    <i class="bi bi-robot me-2"></i> Asistente IA
+</button>
+
+<!-- Overlay -->
+<div id="asistente-overlay"></div>
+
+<!-- Panel lateral del Asistente IA -->
+<div id="asistente-panel">
+    <div id="asistente-header">
+        <div class="avatar"><i class="bi bi-robot"></i></div>
+        <div class="info">
+            <strong>Asistente IA — LexNova</strong>
+            <small>
+                Exp. {{ expediente.nurej|default:expediente.pk }}
+                · {{ expediente.cliente.nombre_completo|truncatechars:28 }}
+                · {{ expediente.materia }}
+            </small>
+        </div>
+        <button id="asistente-cerrar" title="Cerrar">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    <!-- Acciones rápidas según materia -->
+    <div id="asistente-acciones">
+        <button class="btn-accion-rapida" onclick="accionRapida(this)">
+            📋 Analizar el caso
+        </button>
+        <button class="btn-accion-rapida" onclick="accionRapida(this)">
+            ✍️ Redactar memorial
+        </button>
+        <button class="btn-accion-rapida" onclick="accionRapida(this)">
+            ⏰ Verificar plazos
+        </button>
+        <button class="btn-accion-rapida" onclick="accionRapida(this)">
+            ⚖️ Próximos pasos
+        </button>
+        {% if mostrar_calculadora_familia %}
+        <button class="btn-accion-rapida" onclick="accionRapida(this)">
+            💰 ¿Procede apremio corporal?
+        </button>
+        {% endif %}
+    </div>
+
+    <div id="asistente-mensajes">
+        <!-- Mensaje de bienvenida contextualizado -->
+        <div class="asis-msg bot">
+            Hola <strong>{{ request.user.get_full_name|default:request.user.username }}</strong> 👋<br><br>
+            Tengo acceso al expediente completo de
+            <strong>{{ expediente.cliente.nombre_completo }}</strong>
+            ({{ expediente.materia }} · NUREJ {{ expediente.nurej|default:'s/n' }}).<br><br>
+            Puedo ayudarte a <strong>redactar escritos</strong>, <strong>calcular plazos</strong>,
+            <strong>analizar estrategia</strong> o responder cualquier consulta legal
+            usando los datos reales del caso. ¿Qué necesitás?
+        </div>
+    </div>
+
+    <div id="asistente-footer">
+        <textarea id="asistente-input"
+                  placeholder="Ej: Redactame una conminatoria, ¿qué plazos vencen?, analiza el caso..."
+                  rows="1"></textarea>
+        <button id="asistente-send" title="Enviar">
+            <i class="bi bi-send-fill"></i>
+        </button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    var panel    = document.getElementById('asistente-panel');
+    var overlay  = document.getElementById('asistente-overlay');
+    var cerrar   = document.getElementById('asistente-cerrar');
+    var mensajes = document.getElementById('asistente-mensajes');
+    var input    = document.getElementById('asistente-input');
+    var send     = document.getElementById('asistente-send');
+
+    var historial = [];
+    var cargando  = false;
+    var abierto   = false;
+
+    // URL del endpoint (generada por Django)
+    var URL_ENDPOINT = '{% url "api_asistente_expediente" expediente.pk %}';
+    var CSRF         = '{{ csrf_token }}';
+
+    // ── Abrir / cerrar ────────────────────────────────────────
+    function abrirPanel() {
+        abierto = true;
+        panel.classList.add('abierto');
+        overlay.classList.add('visible');
+        input.focus();
+        scrollAbajo();
+    }
+    function cerrarPanel() {
+        abierto = false;
+        panel.classList.remove('abierto');
+        overlay.classList.remove('visible');
+    }
+
+    document.getElementById('btn-abrir-asistente').addEventListener('click', abrirPanel);
+    document.getElementById('btn-asistente-header').addEventListener('click', abrirPanel);
+    cerrar.addEventListener('click', cerrarPanel);
+    overlay.addEventListener('click', cerrarPanel);
+
+    // ── Acciones rápidas ──────────────────────────────────────
+    window.accionRapida = function (el) {
+        var texto = el.textContent.trim().replace(/^[^\w¿¡]+/, '');
+        input.value = texto;
+        abrirPanel();
+        enviar();
+    };
+
+    // ── Enviar con Enter ──────────────────────────────────────
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            enviar();
+        }
+    });
+    send.addEventListener('click', enviar);
+
+    // Auto-resize textarea
+    input.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 110) + 'px';
+    });
+
+   // ── Envío principal ───────────────────────────────────────
+    function enviar() {
+        var texto = input.value.trim();
+        if (!texto || cargando) return;
+
+        agregarMensaje(texto, 'user');
+        input.value = '';
+        input.style.height = 'auto';
+
+        // Detectar si la consulta involucra documentos
+        var palabrasDoc = ['documento','adjunto','pdf','resolución','auto','demanda',
+                           'memorial','lee','leer','analiza','dice','contiene','revisar'];
+        var mencionaDoc = palabrasDoc.some(function(p) {
+            return texto.toLowerCase().indexOf(p) !== -1;
+        });
+
+        var msgTyping = mencionaDoc
+            ? 'Leyendo los documentos adjuntos del expediente...'
+            : 'El asistente está analizando el expediente...';
+        var typing = agregarMensaje(msgTyping, 'typing');
+        cargando = true;
+        send.disabled = true;
+
+        fetch(URL_ENDPOINT, {
+            method:  'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken':  CSRF,
+            },
+            body: JSON.stringify({
+                mensaje:   texto,
+                historial: historial,
+                leer_docs: mencionaDoc,
+            }),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            typing.remove();
+            if (data.ok) {
+                // Usar historial devuelto por el servidor
+                if (data.historial) historial = data.historial;
+
+                // Mostrar badge de documentos leídos si los hubo
+                if (data.docs_leidos && data.docs_leidos.length > 0) {
+                    var leidos = data.docs_leidos.filter(function(d) {
+                        return d.metodo !== 'no_leido' && d.metodo !== 'error';
+                    });
+                    if (leidos.length > 0) {
+                        var metodos = leidos.map(function(d) {
+                            return d.nombre + (d.metodo === 'vision' ? ' 👁️' : ' 📄');
+                        }).join(', ');
+                        var badge = document.createElement('div');
+                        badge.style.cssText = 'font-size:.7rem;color:#2d6a4f;background:#d8f3dc;'
+                            + 'border:1px solid #b7e4c7;border-radius:6px;padding:3px 8px;'
+                            + 'align-self:flex-start;margin-bottom:4px;';
+                        badge.innerHTML = '<i class="bi bi-file-check me-1"></i>'
+                            + leidos.length + ' documento(s) leído(s): ' + metodos;
+                        mensajes.appendChild(badge);
+                    }
+                }
+
+                agregarMensaje(data.respuesta, 'bot');
+            } else {
+                agregarMensaje('⚠️ ' + (data.error || 'Error al contactar el asistente.'), 'bot');
+            }
+        })
+        .catch(function () {
+            typing.remove();
+            agregarMensaje('⚠️ Sin conexión. Verifica tu red e intenta nuevamente.', 'bot');
+        })
+        .finally(function () {
+            cargando = false;
+            send.disabled = false;
+            scrollAbajo();
+            input.focus();
+        });
+    }
+
+    // ── Renderizar mensaje ────────────────────────────────────
+    function agregarMensaje(texto, tipo) {
+        var div = document.createElement('div');
+        div.className = 'asis-msg ' + tipo;
+
+        if (tipo === 'bot') {
+            // Formato básico: negritas y saltos de línea
+            var html = texto
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^#{1,3} (.+)$/gm, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+            div.innerHTML = html;
+
+            // Botón copiar para respuestas largas (escritos, análisis)
+            if (texto.length > 200) {
+                var btnCopiar = document.createElement('button');
+                btnCopiar.className = 'btn-copiar-msg';
+                btnCopiar.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copiar';
+                btnCopiar.onclick = function () {
+                    navigator.clipboard.writeText(texto).then(function () {
+                        btnCopiar.innerHTML = '<i class="bi bi-check2 me-1"></i>Copiado';
+                        setTimeout(function () {
+                            btnCopiar.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copiar';
+                        }, 2000);
+                    });
+                };
+                div.appendChild(document.createElement('br'));
+                div.appendChild(btnCopiar);
+            }
+        } else {
+            div.textContent = texto;
+        }
+
+        mensajes.appendChild(div);
+        scrollAbajo();
+        return div;
+    }
+
+    function scrollAbajo() {
+        mensajes.scrollTop = mensajes.scrollHeight;
+    }
+
+});
+</script>
 {% endblock %}

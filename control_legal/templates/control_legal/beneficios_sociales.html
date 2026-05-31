@@ -1,0 +1,961 @@
+{% extends "base.html" %}
+{% block titulo %}Calculadora de Beneficios Sociales{% endblock %}
+{% block topbar_titulo %}Beneficios Sociales — Derecho Laboral Boliviano{% endblock %}
+
+{% block estilos_extra %}
+<style>
+/* ══ VARIABLES LEXNOVA ══ */
+:root {
+  --ln-navy:   #1a2744;
+  --ln-blue:   #2d4a8a;
+  --ln-light:  #e8ecf4;
+  --ln-accent: #3d6fd4;
+  --ln-green:  #198754;
+  --ln-gold:   #c9962a;
+}
+
+/* ══ LAYOUT ══ */
+.bs-header {
+  background: linear-gradient(135deg, var(--ln-navy) 0%, var(--ln-blue) 100%);
+  border-radius: 14px;
+  padding: 28px 32px;
+  color: #fff;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.bs-header::before {
+  content: '⚖';
+  position: absolute;
+  right: 28px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 6rem;
+  opacity: .07;
+  line-height: 1;
+}
+.bs-header h4 { font-weight: 800; letter-spacing: .5px; margin: 0 0 4px; }
+.bs-header small { opacity: .7; font-size: .82rem; }
+
+/* ══ CARDS DEL FORMULARIO ══ */
+.bs-card {
+  background: #fff;
+  border: 1px solid #e2e8f4;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(26,39,68,.06);
+}
+.bs-card-title {
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ln-blue);
+  border-bottom: 2px solid var(--ln-light);
+  padding-bottom: 10px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bs-card-title i { font-size: 1rem; }
+
+/* ══ INPUTS ══ */
+.form-label { font-size: .82rem; font-weight: 600; color: #3a4a6b; margin-bottom: 4px; }
+.form-control, .form-select {
+  border: 1px solid #d8dff0;
+  border-radius: 8px;
+  font-size: .88rem;
+  padding: 9px 12px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--ln-blue);
+  box-shadow: 0 0 0 3px rgba(45,74,138,.12);
+}
+.input-group-text {
+  background: var(--ln-light);
+  border-color: #d8dff0;
+  font-size: .82rem;
+  color: var(--ln-navy);
+  font-weight: 600;
+}
+
+/* ══ BOTÓN CALCULAR ══ */
+.btn-calcular {
+  background: linear-gradient(135deg, var(--ln-navy), var(--ln-blue));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 40px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: opacity .2s, transform .15s, box-shadow .2s;
+  width: 100%;
+}
+.btn-calcular:hover {
+  opacity: .92;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(26,39,68,.3);
+}
+
+/* ══ RESULTADO ══ */
+#resultado-container { display: none; }
+
+.resultado-header {
+  background: linear-gradient(135deg, var(--ln-navy), var(--ln-blue));
+  border-radius: 12px 12px 0 0;
+  padding: 20px 24px;
+  color: #fff;
+}
+.resultado-header h5 { font-weight: 800; margin: 0; }
+
+.tabla-resultado thead th {
+  background: var(--ln-navy);
+  color: #fff;
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  border: none;
+}
+.tabla-resultado tbody td {
+  font-size: .85rem;
+  padding: 12px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f0f3fa;
+}
+.tabla-resultado tbody tr:hover { background: #f8f9fd; }
+
+.concepto-nombre { font-weight: 600; color: var(--ln-navy); }
+.fundamento-legal {
+  font-size: .72rem;
+  color: #6c757d;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fundamento-legal i { color: var(--ln-accent); }
+
+.monto-cell { font-weight: 700; color: var(--ln-navy); font-size: .92rem; }
+.monto-cero { color: #adb5bd; font-weight: 400; }
+.monto-multa { color: #dc3545; }
+.monto-total { color: var(--ln-green); font-size: 1.1rem; }
+
+.badge-aplica {
+  font-size: .68rem;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+/* ══ RESUMEN TOTALES ══ */
+.resumen-total {
+  background: linear-gradient(135deg, var(--ln-navy), var(--ln-blue));
+  color: #fff;
+  border-radius: 0 0 12px 12px;
+  padding: 24px;
+}
+.resumen-total .cifra { font-size: 2.2rem; font-weight: 800; }
+.resumen-total .label { font-size: .78rem; opacity: .75; }
+
+/* ══ TIEMPO DE SERVICIO ══ */
+.tiempo-badge {
+  background: var(--ln-light);
+  border: 1px solid #c8d4f0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--ln-navy);
+  display: inline-block;
+}
+
+/* ══ DISCLAIMER ══ */
+.disclaimer {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid var(--ln-gold);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: .78rem;
+  color: #78350f;
+  margin-top: 20px;
+}
+
+/* ══ TOOLTIP LEGAL ══ */
+.tip-legal {
+  cursor: help;
+  border-bottom: 1px dashed #6c757d;
+}
+
+/* ══ ANIMACIÓN ══ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim-in { animation: fadeIn .4s ease both; }
+
+/* ══ ERROR ══ */
+.bs-error {
+  background: #fff5f5;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: .85rem;
+  color: #991b1b;
+  display: none;
+  margin-bottom: 16px;
+}
+</style>
+{% endblock %}
+
+{% block contenido %}
+
+<!-- HEADER -->
+<div class="bs-header">
+  <h4><i class="bi bi-briefcase-fill me-2"></i>Motor de Liquidación Laboral</h4>
+  <small>
+    Ley General del Trabajo · D.S. 110 · D.S. 28699 · D.S. 522 · D.S. 21060 · Ley 18/12/1944
+  </small>
+</div>
+
+<!-- ERROR GLOBAL -->
+<div class="bs-error" id="bs-error">
+  <i class="bi bi-exclamation-triangle me-2"></i>
+  <span id="bs-error-msg"></span>
+</div>
+
+<div class="row g-4">
+
+  <!-- ══ COLUMNA FORMULARIO ══ -->
+  <div class="col-lg-5">
+
+    <!-- Partes -->
+    <div class="bs-card">
+      <div class="bs-card-title">
+        <i class="bi bi-people"></i> Datos de las Partes
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Nombre del Trabajador</label>
+        <input type="text" id="nombre_trabajador" class="form-control"
+               placeholder="Ej: Juan Mamani Quispe">
+      </div>
+      <div class="mb-0">
+        <label class="form-label">Nombre del Empleador / Empresa</label>
+        <input type="text" id="nombre_empleador" class="form-control"
+               placeholder="Ej: Empresa XYZ S.R.L.">
+      </div>
+    </div>
+
+    <!-- Fechas -->
+    <div class="bs-card">
+      <div class="bs-card-title">
+        <i class="bi bi-calendar-range"></i> Período Laboral
+      </div>
+      <div class="row g-3">
+        <div class="col-6">
+          <label class="form-label">Fecha de Ingreso</label>
+          <input type="date" id="fecha_ingreso" class="form-control">
+        </div>
+        <div class="col-6">
+          <label class="form-label">Fecha de Conclusión</label>
+          <input type="date" id="fecha_conclusion" class="form-control">
+        </div>
+      </div>
+      <div class="mt-3" id="tiempo-servicio-display" style="display:none;">
+        <label class="form-label">Tiempo de servicio computado:</label><br>
+        <span class="tiempo-badge" id="tiempo-texto"></span>
+      </div>
+    </div>
+
+    <!-- Salarios -->
+    <div class="bs-card">
+      <div class="bs-card-title">
+        <i class="bi bi-cash-stack"></i> Salarios — Últimos 3 Meses
+      </div>
+      <div class="form-text mb-3" style="font-size:.78rem;">
+        <i class="bi bi-info-circle me-1 text-primary"></i>
+        Para jornaleros: ingrese el promedio de 30 días en los 3 campos.
+        El SPI (Sueldo Promedio Indemnizable) se calcula automáticamente.
+      </div>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Mes 1 (más reciente)</label>
+          <div class="input-group">
+            <span class="input-group-text">Bs.</span>
+            <input type="number" step="0.01" min="0" id="salario_1"
+                   class="form-control" placeholder="0.00">
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Mes 2</label>
+          <div class="input-group">
+            <span class="input-group-text">Bs.</span>
+            <input type="number" step="0.01" min="0" id="salario_2"
+                   class="form-control" placeholder="0.00">
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Mes 3 (más antiguo)</label>
+          <div class="input-group">
+            <span class="input-group-text">Bs.</span>
+            <input type="number" step="0.01" min="0" id="salario_3"
+                   class="form-control" placeholder="0.00">
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 p-3 rounded" style="background:var(--ln-light);">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold" style="font-size:.82rem;">SPI calculado:</span>
+          <span class="fw-bold" style="color:var(--ln-navy);font-size:.95rem;"
+                id="spi-display">Bs. —</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opciones -->
+    <div class="bs-card">
+      <div class="bs-card-title">
+        <i class="bi bi-sliders"></i> Parámetros del Cese
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Causa de extinción laboral</label>
+        <select id="causa_extincion" class="form-select">
+          <option value="despido_injustificado">Despido Injustificado</option>
+          <option value="renuncia">Renuncia Voluntaria</option>
+          <option value="abandono">Abandono de Trabajo</option>
+          <option value="mutuo_acuerdo">Mutuo Acuerdo</option>
+          <option value="conclusion_contrato">Conclusión de Contrato</option>
+        </select>
+        <div class="form-text" id="causa-nota" style="font-size:.75rem;margin-top:6px;"></div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Tipo de entidad empleadora</label>
+        <select id="tipo_entidad" class="form-select">
+          <option value="lucro">Con fines de lucro (3 SMN)</option>
+          <option value="no_lucro">Sin fines de lucro (1 SMN)</option>
+        </select>
+        <div class="form-text" style="font-size:.75rem;margin-top:4px;">
+          Afecta al cálculo del Bono de Antigüedad — D.S. 21060
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Salario Mínimo Nacional vigente (Bs.)</label>
+        <div class="input-group">
+          <span class="input-group-text">Bs.</span>
+          <input type="number" step="0.01" min="0" id="smn"
+                 class="form-control" value="2362">
+        </div>
+        <div class="form-text" style="font-size:.75rem;margin-top:4px;">
+          Actualizá según DS vigente al momento del cese.
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <div class="form-check p-3 rounded" style="background:var(--ln-light);">
+          <input class="form-check-input" type="checkbox" id="quinquenio_check">
+          <label class="form-check-label fw-semibold" for="quinquenio_check"
+                 style="font-size:.85rem;">
+            ¿Aplica consolidación por Quinquenio?
+          </label>
+          <div class="form-text" style="font-size:.74rem;margin-top:4px;">
+            D.S. 522 — consolidación de indemnización cada 5 años de servicio
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-0">
+        <div class="form-check p-3 rounded" style="background:var(--ln-light);">
+          <input class="form-check-input" type="checkbox" id="multa30_check">
+          <label class="form-check-label fw-semibold" for="multa30_check"
+                 style="font-size:.85rem;">
+            ¿Han pasado más de 15 días desde el despido?
+          </label>
+          <div class="form-text" style="font-size:.74rem;margin-top:4px;">
+            D.S. 28699 Art. 9 — Multa del 30% sobre el total adeudado
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vacaciones -->
+    <div class="bs-card">
+      <div class="bs-card-title">
+        <i class="bi bi-umbrella"></i> Vacaciones Pendientes
+      </div>
+      <div class="mb-0">
+        <label class="form-label">Días de vacación no gozados</label>
+        <div class="input-group">
+          <input type="number" step="1" min="0" id="dias_vacacion"
+                 class="form-control" placeholder="0" value="0">
+          <span class="input-group-text">días</span>
+        </div>
+        <div class="form-text" style="font-size:.75rem;margin-top:6px;">
+          <i class="bi bi-info-circle me-1"></i>
+          Escala: 1 año=15d · 5 años=20d · 8 años=25d · 10+ años=30d (LGT Art. 44)
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-calcular" onclick="calcularTodo()">
+      <i class="bi bi-calculator me-2"></i>Calcular Liquidación Completa
+    </button>
+
+    <button class="btn-calcular mt-2" id="btn-pdf"
+            onclick="generarPDF()"
+            style="background:linear-gradient(135deg,#7b1515,#c0392b);display:none;">
+      <i class="bi bi-file-earmark-pdf me-2"></i>Descargar Reporte PDF — Prefiniquito
+    </button>
+
+  </div><!-- fin col formulario -->
+
+  <!-- ══ COLUMNA RESULTADOS ══ -->
+  <div class="col-lg-7">
+    <div id="resultado-container">
+
+      <!-- Info del cálculo -->
+      <div class="bs-card mb-3 anim-in" id="resultado-info">
+        <div class="row g-3 text-center">
+          <div class="col-4 border-end">
+            <div style="font-size:.72rem;color:#6c757d;text-transform:uppercase;
+                        font-weight:700;letter-spacing:.8px;">Trabajador</div>
+            <div class="fw-bold" style="font-size:.9rem;color:var(--ln-navy);"
+                 id="res-trabajador">—</div>
+          </div>
+          <div class="col-4 border-end">
+            <div style="font-size:.72rem;color:#6c757d;text-transform:uppercase;
+                        font-weight:700;letter-spacing:.8px;">Empleador</div>
+            <div class="fw-bold" style="font-size:.9rem;color:var(--ln-navy);"
+                 id="res-empleador">—</div>
+          </div>
+          <div class="col-4">
+            <div style="font-size:.72rem;color:#6c757d;text-transform:uppercase;
+                        font-weight:700;letter-spacing:.8px;">SPI</div>
+            <div class="fw-bold" style="font-size:.9rem;color:var(--ln-navy);"
+                 id="res-spi">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla principal -->
+      <div class="rounded-3 overflow-hidden shadow-sm anim-in" id="resultado-tabla-wrap">
+        <div class="resultado-header d-flex justify-content-between align-items-center">
+          <h5><i class="bi bi-table me-2"></i>Detalle de la Liquidación</h5>
+          <button onclick="imprimirLiquidacion()"
+                  class="btn btn-sm btn-outline-light">
+            <i class="bi bi-printer me-1"></i>Imprimir
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table tabla-resultado mb-0">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>Cálculo</th>
+                <th class="text-end">Monto (Bs.)</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-body">
+            </tbody>
+          </table>
+        </div>
+        <!-- Totales -->
+        <div class="resumen-total">
+          <div class="row g-3 align-items-center">
+            <div class="col-md-4 text-center border-end border-white border-opacity-25">
+              <div class="label">SUBTOTAL</div>
+              <div class="cifra" id="res-subtotal">Bs. 0.00</div>
+            </div>
+            <div class="col-md-4 text-center border-end border-white border-opacity-25">
+              <div class="label">MULTA 30%</div>
+              <div class="cifra" id="res-multa" style="font-size:1.5rem;">Bs. 0.00</div>
+            </div>
+            <div class="col-md-4 text-center">
+              <div class="label">TOTAL A PAGAR</div>
+              <div class="cifra" id="res-total">Bs. 0.00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="disclaimer anim-in">
+        <strong><i class="bi bi-exclamation-triangle me-1"></i>Disclaimer Legal Obligatorio:</strong>
+        Los resultados de esta calculadora constituyen una <strong>estimación referencial</strong>
+        basada en la Ley General del Trabajo y los Decretos Supremos vigentes en Bolivia.
+        No constituye asesoría jurídica vinculante. Los montos finales pueden variar según
+        circunstancias específicas de la relación laboral, convenios colectivos aplicables,
+        y resoluciones judiciales o administrativas. Se recomienda consultar con un abogado
+        laboralista habilitado. <strong>LexNova no asume responsabilidad</strong> por
+        decisiones tomadas exclusivamente en base a esta estimación.
+      </div>
+
+    </div><!-- fin resultado-container -->
+
+    <!-- Estado inicial -->
+    <div id="estado-inicial" class="bs-card text-center py-5">
+      <i class="bi bi-calculator" style="font-size:3.5rem;color:#d0d8ee;"></i>
+      <p class="mt-3 mb-0" style="color:#9aa4bf;font-size:.9rem;">
+        Complete el formulario y presione<br>
+        <strong>"Calcular Liquidación Completa"</strong><br>
+        para obtener el detalle con fundamentos legales.
+      </p>
+    </div>
+
+  </div><!-- fin col resultados -->
+
+</div><!-- fin row -->
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+/* ════════════════════════════════════════════════════════════════
+   MOTOR DE CÁLCULO — BENEFICIOS SOCIALES BOLIVIANOS
+   Base legal: LGT, D.S. 110, D.S. 28699, D.S. 522, D.S. 21060
+════════════════════════════════════════════════════════════════ */
+
+// Actualizar SPI en tiempo real
+['salario_1','salario_2','salario_3'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', actualizarSPI);
+});
+
+// Mostrar tiempo de servicio al cambiar fechas
+['fecha_ingreso','fecha_conclusion'].forEach(function(id) {
+  document.getElementById(id).addEventListener('change', mostrarTiempo);
+});
+
+// Nota según causa
+document.getElementById('causa_extincion').addEventListener('change', function() {
+  var notas = {
+    'despido_injustificado': '⚖️ Genera Desahucio (SPI × 3) — LGT Art. 12 y D.S. 110',
+    'renuncia':  '📋 Sin Desahucio. Solo indemnización si supera 90 días (LGT Art. 13)',
+    'abandono':  '❌ Sin Desahucio ni Indemnización — LGT Art. 16',
+    'mutuo_acuerdo': '🤝 Sin Desahucio. Indemnización proporcional según acuerdo',
+    'conclusion_contrato': '📄 Sin Desahucio si el plazo estaba pactado',
+  };
+  document.getElementById('causa-nota').textContent = notas[this.value] || '';
+});
+
+// ── Helpers matemáticos ──────────────────────────────────────
+
+function redondear(n) { return Math.round(n * 100) / 100; }
+
+function formatBs(n) {
+  return 'Bs. ' + redondear(n).toLocaleString('es-BO', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+}
+
+function actualizarSPI() {
+  var s1 = parseFloat(document.getElementById('salario_1').value) || 0;
+  var s2 = parseFloat(document.getElementById('salario_2').value) || 0;
+  var s3 = parseFloat(document.getElementById('salario_3').value) || 0;
+  var spi = (s1 + s2 + s3) / 3;
+  document.getElementById('spi-display').textContent = spi > 0 ? formatBs(spi) : 'Bs. —';
+}
+
+// ── Cálculo de tiempo de servicio (ciclos naturales) ──────────
+// Método calendario natural — evita el error del "1 mes y 1 día"
+function calcularTiempo(ingreso, conclusion) {
+  var fi = new Date(ingreso + 'T00:00:00');
+  var ff = new Date(conclusion + 'T00:00:00');
+
+  if (ff <= fi) return null;
+
+  var anios = ff.getFullYear() - fi.getFullYear();
+  var meses = ff.getMonth() - fi.getMonth();
+  var dias  = ff.getDate() - fi.getDate();
+
+  if (dias < 0) {
+    meses--;
+    // Días del mes anterior al de conclusión
+    var mesAnterior = new Date(ff.getFullYear(), ff.getMonth(), 0);
+    dias += mesAnterior.getDate();
+  }
+  if (meses < 0) { anios--; meses += 12; }
+
+  // Total en días para cálculos proporcionales
+  var totalDias = Math.floor((ff - fi) / (1000 * 60 * 60 * 24));
+
+  return { anios: anios, meses: meses, dias: dias, totalDias: totalDias };
+}
+
+function mostrarTiempo() {
+  var fi = document.getElementById('fecha_ingreso').value;
+  var ff = document.getElementById('fecha_conclusion').value;
+  if (!fi || !ff) return;
+  var t = calcularTiempo(fi, ff);
+  if (!t) return;
+  var txt = t.anios + ' año(s), ' + t.meses + ' mes(es) y ' + t.dias + ' día(s)';
+  document.getElementById('tiempo-texto').textContent = txt
+      + '  |  ' + t.totalDias + ' días totales';
+  document.getElementById('tiempo-servicio-display').style.display = 'block';
+}
+
+// ── Escala Bono de Antigüedad D.S. 21060 ─────────────────────
+function calcularBonoAntiguedad(aniosCompletos, spi, smn, tipoEntidad) {
+  // Base de cálculo: lucro=3SMN, no_lucro=1SMN
+  var base = tipoEntidad === 'lucro' ? smn * 3 : smn * 1;
+  // Escala porcentual según años
+  var pct = 0;
+  if      (aniosCompletos >= 2  && aniosCompletos < 4)  pct = 0.05;
+  else if (aniosCompletos >= 4  && aniosCompletos < 6)  pct = 0.08;
+  else if (aniosCompletos >= 6  && aniosCompletos < 8)  pct = 0.11;
+  else if (aniosCompletos >= 8  && aniosCompletos < 10) pct = 0.14;
+  else if (aniosCompletos >= 10 && aniosCompletos < 12) pct = 0.17;
+  else if (aniosCompletos >= 12 && aniosCompletos < 14) pct = 0.20;
+  else if (aniosCompletos >= 14 && aniosCompletos < 16) pct = 0.23;
+  else if (aniosCompletos >= 16 && aniosCompletos < 18) pct = 0.26;
+  else if (aniosCompletos >= 18 && aniosCompletos < 20) pct = 0.29;
+  else if (aniosCompletos >= 20 && aniosCompletos < 22) pct = 0.32;
+  else if (aniosCompletos >= 22 && aniosCompletos < 24) pct = 0.35;
+  else if (aniosCompletos >= 24 && aniosCompletos < 25) pct = 0.38;
+  else if (aniosCompletos >= 25)                        pct = 0.40;  // máximo
+  return redondear(base * pct);
+}
+
+// ── FUNCIÓN PRINCIPAL ─────────────────────────────────────────
+function calcularTodo() {
+  var err = document.getElementById('bs-error');
+  err.style.display = 'none';
+
+  function mostrarError(msg) {
+    document.getElementById('bs-error-msg').textContent = msg;
+    err.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Leer inputs
+  var trabajador  = document.getElementById('nombre_trabajador').value.trim() || 'No especificado';
+  var empleador   = document.getElementById('nombre_empleador').value.trim()  || 'No especificado';
+  var fi_str      = document.getElementById('fecha_ingreso').value;
+  var ff_str      = document.getElementById('fecha_conclusion').value;
+  var s1 = parseFloat(document.getElementById('salario_1').value) || 0;
+  var s2 = parseFloat(document.getElementById('salario_2').value) || 0;
+  var s3 = parseFloat(document.getElementById('salario_3').value) || 0;
+  var causa       = document.getElementById('causa_extincion').value;
+  var tipoEntidad = document.getElementById('tipo_entidad').value;
+  var smn         = parseFloat(document.getElementById('smn').value) || 2362;
+  var quinquenio  = document.getElementById('quinquenio_check').checked;
+  var aplicarM30  = document.getElementById('multa30_check').checked;
+  var diasVacacion= parseInt(document.getElementById('dias_vacacion').value) || 0;
+
+  // Validaciones
+  if (!fi_str || !ff_str) return mostrarError('Ingresá ambas fechas (ingreso y conclusión).');
+  if (s1 <= 0 && s2 <= 0 && s3 <= 0) return mostrarError('Ingresá al menos el salario del último mes.');
+
+  var tiempo = calcularTiempo(fi_str, ff_str);
+  if (!tiempo) return mostrarError('La fecha de conclusión debe ser posterior a la de ingreso.');
+
+  var ffDate = new Date(ff_str + 'T00:00:00');
+
+  // SPI
+  var spi = redondear((s1 + s2 + s3) / 3);
+
+  // Anios completos para bono antigüedad y quinquenio
+  var aniosTotales = tiempo.anios + (tiempo.meses / 12) + (tiempo.dias / 365);
+  var aniosCompletos = tiempo.anios;
+
+  // ── CONCEPTOS ──────────────────────────────────────────────
+  var filas   = [];
+  var subtotal = 0;
+
+  // 1. SALARIO DEVENGADO (días trabajados en el último mes parcial)
+  var diasUltimoMes = tiempo.dias;
+  var salarioDevengado = 0;
+  if (diasUltimoMes > 0) {
+    salarioDevengado = redondear(spi / 30 * diasUltimoMes);
+  }
+  filas.push({
+    concepto:   'Salario Devengado',
+    calculo:    'SPI / 30 × ' + diasUltimoMes + ' días = ' + formatBs(salarioDevengado),
+    monto:      salarioDevengado,
+    fundamento: 'LGT Art. 18 — D.S. 1592 Art. 2',
+    aplica:     diasUltimoMes > 0,
+  });
+
+  // 2. INDEMNIZACIÓN (solo si tiempo > 90 días)
+  var indemnizacion = 0;
+  var aplicaIndemnizacion = false;
+  var sinDerechoIndem = (causa === 'abandono');
+
+  if (!sinDerechoIndem && tiempo.totalDias > 90) {
+    aplicaIndemnizacion = true;
+    // 1 sueldo por año, proporcional a meses y días
+    var fraccionMeses = tiempo.meses / 12;
+    var fraccionDias  = tiempo.dias / 365;
+    indemnizacion = redondear(spi * (aniosCompletos + fraccionMeses + fraccionDias));
+    if (quinquenio) {
+      // D.S. 522: quinquenios consolidados (simplificado: aplica si >= 5 años)
+      var quinqueniosCompletos = Math.floor(aniosTotales / 5);
+      if (quinqueniosCompletos > 0) {
+        indemnizacion = redondear(indemnizacion * 1.0); // ya incluida en el cálculo
+      }
+    }
+  }
+  var notaIndem = sinDerechoIndem
+    ? 'No aplica — Abandono de trabajo (LGT Art. 16)'
+    : (tiempo.totalDias <= 90 ? 'No aplica — Tiempo < 90 días (LGT Art. 13)' : '');
+  filas.push({
+    concepto:   'Indemnización por Tiempo de Servicio',
+    calculo:    aplicaIndemnizacion
+      ? 'SPI × (' + aniosCompletos + ' años + ' + tiempo.meses + ' meses + ' + tiempo.dias + ' días) = ' + formatBs(indemnizacion)
+      : notaIndem,
+    monto:      indemnizacion,
+    fundamento: 'LGT Art. 13 · D.S. 110 Art. 1 · Ley 18/12/1944',
+    aplica:     aplicaIndemnizacion,
+  });
+
+  // 3. DESAHUCIO (solo Despido Injustificado)
+  var desahucio = 0;
+  var aplicaDesahucio = (causa === 'despido_injustificado');
+  if (aplicaDesahucio) {
+    desahucio = redondear(spi * 3);
+  }
+  filas.push({
+    concepto:   'Desahucio',
+    calculo:    aplicaDesahucio
+      ? 'SPI × 3 = ' + formatBs(desahucio)
+      : 'No aplica — Solo en despido injustificado',
+    monto:      desahucio,
+    fundamento: 'LGT Art. 12 · D.S. 110 Art. 3',
+    aplica:     aplicaDesahucio,
+  });
+
+  // 4. AGUINALDO PROPORCIONAL
+  // Período: 1° diciembre al 30 noviembre. Si conclusión > 20/dic y no pagado → multa 100%
+  var mesConclusion = ffDate.getMonth(); // 0-based
+  var diaConclusion = ffDate.getDate();
+  // Días transcurridos desde el 1° de diciembre del año anterior (o inicio si es posterior)
+  var inicioAguinaldo = new Date(ffDate.getFullYear(), 11, 1); // 1 dic año en curso
+  if (ffDate < inicioAguinaldo) {
+    inicioAguinaldo = new Date(ffDate.getFullYear() - 1, 11, 1);
+  }
+  var diasAguinaldo = Math.floor((ffDate - inicioAguinaldo) / (1000 * 60 * 60 * 24));
+  var aguinaldo = redondear(spi / 365 * diasAguinaldo);
+  // Multa 100% si concluyó después del 20/dic y no se pagó aguinaldo
+  var multaAguinaldo = false;
+  if (mesConclusion === 11 && diaConclusion > 20) {
+    multaAguinaldo = true;
+    aguinaldo = redondear(aguinaldo * 2);
+  }
+  filas.push({
+    concepto:   'Aguinaldo Proporcional' + (multaAguinaldo ? ' + Multa 100%' : ''),
+    calculo:    'SPI / 365 × ' + diasAguinaldo + ' días = ' + formatBs(aguinaldo)
+                + (multaAguinaldo ? ' (incluye multa 100% por pago tardío)' : ''),
+    monto:      aguinaldo,
+    fundamento: 'D.S. 229 Art. 1 · D.S. 3549' + (multaAguinaldo ? ' · Multa por incumplimiento' : ''),
+    aplica:     true,
+  });
+
+  // 5. VACACIONES
+  var vacaciones = 0;
+  if (diasVacacion > 0) {
+    vacaciones = redondear(spi / 30 * diasVacacion);
+  }
+  filas.push({
+    concepto:   'Vacaciones Pendientes',
+    calculo:    diasVacacion > 0
+      ? 'SPI / 30 × ' + diasVacacion + ' días = ' + formatBs(vacaciones)
+      : 'Sin días de vacación pendientes declarados',
+    monto:      vacaciones,
+    fundamento: 'LGT Art. 44 · D.S. 3150',
+    aplica:     diasVacacion > 0,
+  });
+
+  // 6. BONO DE ANTIGÜEDAD
+  var bonoAntigüedad = 0;
+  var aplicaBono = (aniosCompletos >= 2);
+  if (aplicaBono) {
+    bonoAntigüedad = calcularBonoAntiguedad(aniosCompletos, spi, smn, tipoEntidad);
+  }
+  var baseBonoLabel = tipoEntidad === 'lucro' ? '3 SMN' : '1 SMN';
+  filas.push({
+    concepto:   'Bono de Antigüedad',
+    calculo:    aplicaBono
+      ? 'Base ' + baseBonoLabel + ' × porcentaje escala (' + aniosCompletos + ' años) = ' + formatBs(bonoAntigüedad)
+      : 'No aplica — Requiere mínimo 2 años de servicio',
+    monto:      bonoAntigüedad,
+    fundamento: 'D.S. 21060 Art. 60 · Escala ' + baseBonoLabel,
+    aplica:     aplicaBono,
+  });
+
+  // 7. QUINQUENIO
+  var quinquenioMonto = 0;
+  if (quinquenio && aniosTotales >= 5) {
+    var quinqs = Math.floor(aniosTotales / 5);
+    quinquenioMonto = redondear(spi * quinqs);
+    filas.push({
+      concepto:   'Consolidación por Quinquenio',
+      calculo:    quinqs + ' quinquenio(s) × SPI = ' + formatBs(quinquenioMonto),
+      monto:      quinquenioMonto,
+      fundamento: 'D.S. 522 Art. 2 — Consolidación cada 5 años',
+      aplica:     true,
+    });
+  } else if (quinquenio) {
+    filas.push({
+      concepto:   'Consolidación por Quinquenio',
+      calculo:    'No aplica — Se requieren mínimo 5 años de servicio',
+      monto:      0,
+      fundamento: 'D.S. 522 Art. 2',
+      aplica:     false,
+    });
+  }
+
+  // Calcular subtotal
+  filas.forEach(function(f) { subtotal += f.monto; });
+  subtotal = redondear(subtotal);
+
+  // 8. MULTA 30% D.S. 28699
+  var multa30 = 0;
+  if (aplicarM30) {
+    multa30 = redondear(subtotal * 0.30);
+  }
+
+  var total = redondear(subtotal + multa30);
+
+  // ── RENDERIZAR ─────────────────────────────────────────────
+  var tbody = document.getElementById('tabla-body');
+  tbody.innerHTML = '';
+
+  filas.forEach(function(f) {
+    var tr = document.createElement('tr');
+    var montoClass = f.monto > 0 ? 'monto-cell' : 'monto-cero';
+    tr.innerHTML = '<td>'
+      + '<div class="concepto-nombre">' + f.concepto + '</div>'
+      + '<div class="fundamento-legal"><i class="bi bi-shield-check"></i>' + f.fundamento + '</div>'
+      + '</td>'
+      + '<td style="font-size:.78rem;color:#6c757d;">' + f.calculo + '</td>'
+      + '<td class="text-end"><span class="' + montoClass + '">'
+      + (f.monto > 0 ? formatBs(f.monto) : '—') + '</span></td>';
+    tbody.appendChild(tr);
+  });
+
+  // Fila multa 30%
+  if (aplicarM30) {
+    var trMulta = document.createElement('tr');
+    trMulta.style.background = '#fff5f5';
+    trMulta.innerHTML = '<td>'
+      + '<div class="concepto-nombre text-danger">Multa 30% por Retardo en el Pago</div>'
+      + '<div class="fundamento-legal"><i class="bi bi-shield-check"></i>D.S. 28699 Art. 9 — Más de 15 días desde el despido</div>'
+      + '</td>'
+      + '<td style="font-size:.78rem;color:#6c757d;">Subtotal × 30% = ' + formatBs(multa30) + '</td>'
+      + '<td class="text-end"><span class="monto-multa">' + formatBs(multa30) + '</span></td>';
+    tbody.appendChild(trMulta);
+  }
+
+  // Fila TOTAL
+  var trTotal = document.createElement('tr');
+  trTotal.style.background = '#f0f4ff';
+  trTotal.style.borderTop = '2px solid var(--ln-blue)';
+  trTotal.innerHTML = '<td colspan="2" class="fw-bold" style="color:var(--ln-navy);">'
+    + '<i class="bi bi-check-circle me-2 text-success"></i>TOTAL GENERAL A PAGAR'
+    + '</td>'
+    + '<td class="text-end"><span class="monto-total">' + formatBs(total) + '</span></td>';
+  tbody.appendChild(trTotal);
+
+  // Actualizar resumen
+  document.getElementById('res-trabajador').textContent = trabajador;
+  document.getElementById('res-empleador').textContent  = empleador;
+  document.getElementById('res-spi').textContent        = formatBs(spi);
+  document.getElementById('res-subtotal').textContent   = formatBs(subtotal);
+  document.getElementById('res-multa').textContent      = aplicarM30 ? formatBs(multa30) : 'No aplica';
+  document.getElementById('res-total').textContent      = formatBs(total);
+
+  // ── Guardar datos para el PDF ─────────────────────────────
+  _datosPDF = {
+    trabajador:      trabajador,
+    empleador:       empleador,
+    fechaIngreso:    fi_str.split('-').reverse().join('/'),
+    fechaConclusion: ff_str.split('-').reverse().join('/'),
+    causaLabel:      document.getElementById('causa_extincion')
+                       .options[document.getElementById('causa_extincion').selectedIndex].text,
+    s1: s1, s2: s2, s3: s3,
+    spi: spi,
+    tiempo: tiempo,
+    conceptos: filas.map(function(f) {
+      return {
+        concepto:   f.concepto,
+        calculo:    f.calculo,
+        fundamento: f.fundamento,
+        monto:      f.monto,
+        aplica:     f.aplica,
+      };
+    }),
+    subtotal: subtotal,
+    multa30:  multa30,
+    total:    total,
+  };
+  document.getElementById('btn-pdf').style.display = 'block';
+
+  // Mostrar resultado, ocultar estado inicial
+  document.getElementById('estado-inicial').style.display = 'none';
+  document.getElementById('resultado-container').style.display = 'block';
+  document.getElementById('resultado-container').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Variable global para datos del PDF ────────────────────────
+var _datosPDF = null;
+
+// ── GENERAR PDF ───────────────────────────────────────────────
+function generarPDF() {
+  if (!_datosPDF) {
+    alert('Primero calculá la liquidación.');
+    return;
+  }
+  var btn = document.getElementById('btn-pdf');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generando PDF...';
+
+  fetch('{% url "exportar_prefiniquito_pdf" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || ['',''])[1],
+    },
+    body: JSON.stringify(_datosPDF),
+  })
+  .then(function(r) {
+    if (!r.ok) return r.text().then(function(t) { throw new Error(t); });
+    return r.blob();
+  })
+  .then(function(blob) {
+    var url  = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href     = url;
+    link.download = 'Prefiniquito_' +
+      (_datosPDF.trabajador || 'laboral').replace(/\s+/g, '_') + '.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  })
+  .catch(function(e) {
+    alert('Error generando el PDF: ' + e.message);
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-file-earmark-pdf me-2"></i>Descargar Reporte PDF — Prefiniquito';
+  });
+}
+
+// ── IMPRIMIR ──────────────────────────────────────────────────
+function imprimirLiquidacion() {
+  window.print();
+}
+
+// Mostrar nota de causa al cargar
+document.getElementById('causa_extincion').dispatchEvent(new Event('change'));
+
+// Setear fecha de hoy como conclusión por defecto
+document.getElementById('fecha_conclusion').value = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

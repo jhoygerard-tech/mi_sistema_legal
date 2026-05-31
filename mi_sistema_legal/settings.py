@@ -82,6 +82,7 @@ USE_TZ        = True
 # Archivos estáticos y subidos
 # CORRECCIÓN: eliminadas las definiciones duplicadas que sobreescribían valores
 STATIC_URL  = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL   = '/media/'
 MEDIA_ROOT  = BASE_DIR / 'media'
 
